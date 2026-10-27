@@ -1,0 +1,42 @@
+attention_backend: sdpa
+
+protocol: babylm2026_baseline
+
+model:
+  vocab_size: 16384
+  n_layer: 12
+  n_embd: 768
+  n_head: 12
+  n_positions: 1024
+  activation_function: gelu_new
+  initializer_range: 0.02
+  layer_norm_epsilon: 0.00001
+  attn_pdrop: 0.1
+  resid_pdrop: 0.1
+  embd_pdrop: 0.1
+  tie_word_embeddings: true
+
+training:
+  sequence_length: 512
+  epochs: 10
+  batch_size: 16
+  learning_rate: 0.00005
+  weight_decay: 0.0
+  adam_beta1: 0.9
+  adam_beta2: 0.999
+  adam_epsilon: 0.00000001
+  gradient_clip_norm: 1.0
+  warmup_fraction: 0.01
+  seed: 42
+  words_per_epoch: 100000000
+
+dataset:
+  size: 100M
+  language: English
+  repo_id: BabyLM-community/BabyLM-2026-Strict
+  revision: 9e57baaaa91ac3c638746be14d1d5fa6c789f4cf
+  corpus_path: babylm-2026/English/100M
+  sources: [bnc_spoken, childes, gutenberg, open_subtitles, simple_wiki, switchboard]
+  format: text
+  files: [bnc_spoken.train.txt, childes.train.txt, gutenberg.train.txt, open_subtitles.train.txt, simple_wiki.train.txt, switchboard.train.txt]
+  download_manifest: babylm-2026/_support/download_manifest.json
