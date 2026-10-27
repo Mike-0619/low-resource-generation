@@ -27,16 +27,16 @@ The module retains the parent project's workspace layout:
 ```
 
 Clone this repository into `<workspace>/Projects/low-resource-generation`.
-From the repository root, install the supplied cache helpers only when the
-workspace does not already provide them:
+Before setup, provide `<workspace>/config/cache.py` and
+`<workspace>/config/cache.sh` through your workspace configuration. These external
+dependencies are not included in this repository. Python entrypoints require
+`cache.py`, which calls `cache.sh`; the environment template also sources
+`cache.sh`. Both helpers must implement the workspace cache policy described below.
+A fresh clone alone is therefore insufficient to run the code.
+
+Once these files are available, run from the repository root:
 
 ```bash
-mkdir -p ../../config
-for name in cache.py cache.sh; do
-  if [ ! -e "../../config/$name" ]; then
-    cp "support/workspace-config/$name" "../../config/$name"
-  fi
-done
 source ../../config/cache.sh low-resource-generation
 uv sync --locked
 test -f .env || cp .env.example .env
