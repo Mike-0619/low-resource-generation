@@ -1,0 +1,7 @@
+# Local training data and tokenizers
+/data/
+/tokenizer/
+
+# Generated training outputs
+/results/
+/logs/

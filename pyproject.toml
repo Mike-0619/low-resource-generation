@@ -13,7 +13,21 @@ dependencies = [
     "datasets==5.0.1",
     "tqdm==4.70.1",
     "openai>=2.0",
+    "bitsandbytes==0.50.2",
+    "evaluate==0.4.6",
+    "matplotlib==3.10.9",
+    "pandas==3.0.6",
+    "peft==0.21.3",
+    "pyyaml==6.0.3",
+    "sacrebleu==2.6.0",
+    "trl==0.28.0",
+    "wandb>=0.16",
+    # TRL 0.28 imports Weave when W&B is installed.
+    "weave>=0.51",
 ]
+
+[dependency-groups]
+judge = ["llama-cpp-python[server]==0.3.36"]
 
 [tool.uv]
 package = false

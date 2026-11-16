@@ -1,0 +1,36 @@
+attention_backend: sdpa
+
+model:
+  n_layer: 12
+  n_embd: 768
+  n_head: 12
+  n_positions: 1024
+  activation_function: gelu_new
+  initializer_range: 0.02
+  layer_norm_epsilon: 0.00001
+  attn_pdrop: 0.1
+  resid_pdrop: 0.1
+  embd_pdrop: 0.1
+  tie_word_embeddings: true
+
+training:
+  sequence_length: 512
+  epochs: 10
+  batch_size: 16
+  learning_rate: 0.00005
+  weight_decay: 0.0
+  adam_beta1: 0.9
+  adam_beta2: 0.999
+  adam_epsilon: 0.00000001
+  gradient_clip_norm: 1.0
+  warmup_fraction: 0.01
+  num_workers: 0
+
+condition:
+  name: 100m_de_spans
+  size: 100M
+  language: German
+  variant: shared_spans
+  dataset_repo_id: BabyLM-community/babylm-deu
+  dataset_revision: 69ff474c64a7e0df3a473b1b5d968a0fc18478ac
+  corpus_path: babylm-2026/German/108M

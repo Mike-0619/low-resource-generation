@@ -1,0 +1,30 @@
+# configs/default_config.yaml
+# General Pipeline Settings
+mode: "train"           # "train" or "eval"
+stage: "sft"            # "sft" or "dpo"
+seed: 42
+limit: null             # Set an integer (e.g., 100) for quick testing
+
+# Model & Paths
+model_path: "meta-llama/Llama-3.2-3B"
+output_dir: "outputs/personachat_sft"
+
+# Training Hyperparameters
+epochs: 1
+batch_size: 32
+lr: 0.00005             # 5e-5
+logging_steps: 50
+
+# LoRA Configuration
+use_lora: false
+lora_r: 8
+lora_alpha: 16
+
+# Weights & Biases Configuration
+use_wandb: false
+wandb_project: "babylm_finetune"
+wandb_run_name: "llama_lora_sft_run"
+
+# DPO Configuration
+dpo_beta: 0.1
+dpo_loss_type: "sigmoid"

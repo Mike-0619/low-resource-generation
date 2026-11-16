@@ -1,18 +1,14 @@
-# Local environments and credentials
+# Local environment and Python cache
 .venv/
-.cache/
 .env
-.env.*
-!.env.example
-
-# Python bytecode
 __pycache__/
-*.py[cod]
+.cache/
 
-# Generated artifacts
-logs/
-results/
-outputs/
-reports/
-data/
-tokenizer/
+# Local corpora
+/corpora/
+
+# Generated outputs
+/logs/
+/results/
+/outputs/
+/reports/

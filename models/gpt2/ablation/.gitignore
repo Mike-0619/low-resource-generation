@@ -1,0 +1,10 @@
+# Local training assets and caches
+/data/
+/tokenizer/
+/initializations/
+/.initializations.lock
+__pycache__/
+
+# Generated training outputs
+/results/
+/logs/

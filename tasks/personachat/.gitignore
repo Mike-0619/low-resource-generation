@@ -1,0 +1,4 @@
+# Generated training and evaluation outputs
+/logs/
+/outputs/
+/results/

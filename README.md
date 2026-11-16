@@ -1,99 +1,96 @@
 # Low-resource generation
 
-GPT-2 baselines for English 10M/100M and German 10M/108M BabyLM corpora.
-See [experiment settings and data preparation](model/gpt2/baseline/README.md).
-This snapshot includes training code and the parent project's pinned environment.
-Corpora, tokenizers, model weights, logs and results are not included.
+Research code for low-resource language generation, including GPT-2 pretraining,
+vocabulary-size experiments, paraphrase generation, persona-based dialogue and
+English/German LAMBADA evaluation.
+
+## Components
+
+- [GPT-2 baseline training](models/gpt2/baseline/README.md)
+- [GPT-2 vocabulary ablation](models/gpt2/ablation/README.md)
+- [Paraphrase generation](tasks/paraphrase/README.md)
+- [PersonaChat](tasks/personachat/README.md)
+- [LAMBADA evaluation](tasks/lambada/README.md)
 
 ## Setup
 
-Requires Linux x86_64, CPython 3.14 and uv on PATH. The locked PyTorch build uses
-CUDA 13.2; training requires a compatible driver and an allocated GPU.
+All tasks use the root uv environment on Linux x86_64 with Python 3.14 and
+PyTorch CUDA 13.2. The optional Paraphrase judge uses the same environment.
+See the [judge setup](tasks/paraphrase/README.md#optional-local-judge).
 
-The module retains the parent project's workspace layout:
-
-```text
-<workspace>/
-|-- config/cache.py
-|-- config/cache.sh
-|-- .cache/
-|-- Corpora/babylm-2026/
-`-- Projects/low-resource-generation/
-    |-- pyproject.toml
-    |-- uv.lock
-    |-- .env
-    |-- .venv/
-    `-- model/gpt2/baseline/
-```
-
-Clone this repository into `<workspace>/Projects/low-resource-generation`.
-Before setup, provide `<workspace>/config/cache.py` and
-`<workspace>/config/cache.sh` through your workspace configuration. These external
-dependencies are not included in this repository. Python entrypoints require
-`cache.py`, which calls `cache.sh`; the environment template also sources
-`cache.sh`. Both helpers must implement the workspace cache policy described below.
-A fresh clone alone is therefore insufficient to run the code.
-
-Once these files are available, run from the repository root:
+From the project root, create and load a local configuration, then install
+the locked dependencies:
 
 ```bash
-source ../../config/cache.sh low-resource-generation
-uv sync --locked
 test -f .env || cp .env.example .env
-# Set CORPUS_ROOT in .env to your external corpus directory.
-set +x
 source .env
+export PYTHONDONTWRITEBYTECODE=1
+uv sync --locked
 source .venv/bin/activate
 ```
 
-All disk caches must stay under the physical workspace's `.cache/`. Existing
-workspace cache helpers remain authoritative. Overrides outside that boundary,
-including symlink escapes, are rejected; `WORKSPACE_ROOT` cannot move the cache
-boundary. Python bytecode is disabled by default. The environment template has
-optional API settings inherited from the parent project; baseline training does
-not require an API key.
+In each new shell, load `.env` from the project root, set `PYTHONDONTWRITEBYTECODE=1`
+and activate the environment before running commands. Git ignores the local
+`.env` file, which can hold machine-specific settings and credentials.
 
-Raw corpora and provenance records must be supplied separately as described in
-the [baseline guide](model/gpt2/baseline/README.md#prepare-the-raw-data).
-The German subset generator is external and is not part of this snapshot.
+Caches use library defaults. To change them, set standard variables such as
+`HF_HOME`, `HF_DATASETS_CACHE` and `UV_CACHE_DIR` before starting a program.
+On LRZ, keep workspace cache initialization in the local `.env` and load it before
+running uv or Python. No external workspace helpers are required by the public code.
+
+## GPT-2 data
+
+The default `.env` puts raw corpora in the checkout's `corpora/` directory.
+Git ignores this directory. To prepare English 10M, run from the project root:
+
+```bash
+(cd models/gpt2/baseline && uv run --active --no-sync python -m src.corpora.prepare_babylm --dataset english-10m)
+```
+
+This prepares `corpora/babylm-2026/English/10M/`. To share the same raw corpus
+across multiple checkouts, set the same absolute `CORPUS_ROOT` in each local `.env`:
+
+```bash
+export CORPUS_ROOT="$HOME/Corpora"
+```
+
+Use the parent directory of `babylm-2026/`. The cluster's local `.env` can point to
+an existing shared corpus directory. See the [corpus instructions](models/gpt2/baseline/README.md#prepare-raw-corpora)
+for the other datasets.
 
 ## Running and submission
 
-Run scripts from the repository root. Each script loads `.env` and the shared
-`.venv`, then enters `model/gpt2/baseline`. Create log directories first:
+Follow each module's README for data preparation, training and evaluation.
+The Slurm scripts target LRZ; adjust cluster resource directives for other systems.
+Submit GPT-2, LAMBADA and Paraphrase scripts from the project root. They load `.env` and `.venv`.
+Create the script's log directory before submission. For example:
 
 ```bash
-mkdir -p model/gpt2/baseline/logs/preparation
-for experiment in English/10M English/100M German/10M German/108M; do
-  mkdir -p "model/gpt2/baseline/logs/$experiment/tokenizer" \
-           "model/gpt2/baseline/logs/$experiment/train"
-done
+mkdir -p models/gpt2/ablation/logs/English/prepare
+sbatch --chdir="$PWD" models/gpt2/ablation/scripts/English/prepare.slurm
 ```
 
-Run preparation, tokenizer training and model training in that order. To submit
-preparation on LRZ, use `sbatch model/gpt2/baseline/scripts/prepare_all.slurm`.
-Then use the corresponding `tokenizer.slurm` and `train.slurm` under
-`model/gpt2/baseline/scripts/<language>/<size>/`; wait for each stage to finish.
-These commands submit real jobs. On already allocated resources, invoke the
-same scripts with `bash`. Adapt literal partition/QOS directives for other clusters.
-For a scheduler-only check use `sbatch --test-only path/to/job.slurm`.
-Existing artifacts are protected from overwrite; training resume is unsupported.
+This prepares the English Ablation datasets. Wait for each stage to finish before starting
+the next. Use allocated resources for full preparation and training. Existing
+outputs are protected from overwrite.
+
+## API configuration
+
+Set `OPENAI_API_KEY` and `OPENAI_BASE_URL` in `.env` for API evaluation.
+The example uses OpenRouter; change the endpoint and model name for other providers.
+API requests incur provider charges.
 
 ## Offline tests
 
-After loading the environment above:
+After loading the root environment, set:
 
 ```bash
-cd model/gpt2/baseline
-CUDA_VISIBLE_DEVICES= HF_HUB_OFFLINE=1 HF_DATASETS_OFFLINE=1 OMP_NUM_THREADS=1 RAYON_NUM_THREADS=1 \
-  uv run --active --locked --no-sync python -B -m unittest discover -s tests
+export HF_HUB_OFFLINE=1 HF_DATASETS_OFFLINE=1 CUDA_VISIBLE_DEVICES= OMP_NUM_THREADS=1 RAYON_NUM_THREADS=1
 ```
 
-Tests use temporary fixtures and small CPU models. They do not submit jobs or
-run full training. From the same directory, run
-`uv run --active --locked --no-sync python -B -m src.clean_dataset --help`
-for CLI help; substitute `src.train_tokenizer` or `src.training` for the other stages.
+Run the test command in each module's README. Full test suites use small CPU
+models. Focused cache, configuration and script tests do not run models.
 
-When publishing trained weights separately, include the exact tokenizer used
-by that model. Re-training a tokenizer is appropriate for a fresh experiment,
-not a substitute for the tokenizer paired with existing weights.
+## License
+
+The repository retains its [Apache 2.0 license](LICENSE). The imported LRZ source includes its original [MIT license and copyright notice](LICENSE-MIT).

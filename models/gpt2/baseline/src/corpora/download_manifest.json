@@ -1,0 +1,193 @@
+{
+  "repositories": [
+    {
+      "repo": "BabyLM-community/BabyLM-2026-Strict-Small",
+      "revision": "c92ab16b4f08858304b0815706065b3354d8fc0a",
+      "destination": "English/10M"
+    },
+    {
+      "repo": "BabyLM-community/BabyLM-2026-Strict",
+      "revision": "9e57baaaa91ac3c638746be14d1d5fa6c789f4cf",
+      "destination": "English/100M"
+    },
+    {
+      "repo": "BabyLM-community/babylm-deu",
+      "revision": "69ff474c64a7e0df3a473b1b5d968a0fc18478ac",
+      "destination": "German/108M"
+    }
+  ],
+  "files": [
+    {
+      "path": "English/10M/README.md",
+      "source_url": "https://huggingface.co/datasets/BabyLM-community/BabyLM-2026-Strict-Small/resolve/c92ab16b4f08858304b0815706065b3354d8fc0a/README.md",
+      "size_bytes": 2562,
+      "sha256": "128ac017a491c5283b93a7b7f630e12ed74bd7de6d3ebf804e6ffadfcc4f83db",
+      "official_hash": "1254422db834e9398f7da074d11e11eb34623de5",
+      "official_hash_type": "git-blob-sha1"
+    },
+    {
+      "path": "English/10M/bnc_spoken.train.txt",
+      "source_url": "https://huggingface.co/datasets/BabyLM-community/BabyLM-2026-Strict-Small/resolve/c92ab16b4f08858304b0815706065b3354d8fc0a/bnc_spoken.train.txt",
+      "size_bytes": 4064608,
+      "sha256": "8f3042f4104cf356052fda784682d8e8170fd1fd8c795a1c3e172f9eb2ebfa3c",
+      "official_hash": "b52b1829e2c3f6b304a9f5baa938b0daa9f1d354",
+      "official_hash_type": "git-blob-sha1",
+      "lines": 65220,
+      "whitespace_tokens": 762073
+    },
+    {
+      "path": "English/10M/childes.train.txt",
+      "source_url": "https://huggingface.co/datasets/BabyLM-community/BabyLM-2026-Strict-Small/resolve/c92ab16b4f08858304b0815706065b3354d8fc0a/childes.train.txt",
+      "size_bytes": 15159891,
+      "sha256": "c898c0a44f4380ce7a66766acd01e70eebbbd9410a1701ddf89452ea6f5aea45",
+      "official_hash": "c898c0a44f4380ce7a66766acd01e70eebbbd9410a1701ddf89452ea6f5aea45",
+      "official_hash_type": "sha256",
+      "lines": 531305,
+      "whitespace_tokens": 2841101
+    },
+    {
+      "path": "English/10M/gutenberg.train.txt",
+      "source_url": "https://huggingface.co/datasets/BabyLM-community/BabyLM-2026-Strict-Small/resolve/c92ab16b4f08858304b0815706065b3354d8fc0a/gutenberg.train.txt",
+      "size_bytes": 14031163,
+      "sha256": "4ddcf5774a7947293ceb56dc76774f553b534231e7ac636c071559229cf2cb9b",
+      "official_hash": "4ddcf5774a7947293ceb56dc76774f553b534231e7ac636c071559229cf2cb9b",
+      "official_hash_type": "sha256",
+      "lines": 59934,
+      "whitespace_tokens": 2557721
+    },
+    {
+      "path": "English/10M/open_subtitles.train.txt",
+      "source_url": "https://huggingface.co/datasets/BabyLM-community/BabyLM-2026-Strict-Small/resolve/c92ab16b4f08858304b0815706065b3354d8fc0a/open_subtitles.train.txt",
+      "size_bytes": 12159704,
+      "sha256": "9b21adecf57dd97f611d9442a2f993d2f843278eb24fc98f4165322c1ba5670a",
+      "official_hash": "9b21adecf57dd97f611d9442a2f993d2f843278eb24fc98f4165322c1ba5670a",
+      "official_hash_type": "sha256",
+      "lines": 386046,
+      "whitespace_tokens": 2282877
+    },
+    {
+      "path": "English/10M/simple_wiki.train.txt",
+      "source_url": "https://huggingface.co/datasets/BabyLM-community/BabyLM-2026-Strict-Small/resolve/c92ab16b4f08858304b0815706065b3354d8fc0a/simple_wiki.train.txt",
+      "size_bytes": 8861946,
+      "sha256": "0ac614aa069ea3908c07c9755bf80bb500d4cee15cd972e9f93cccf89639e9a7",
+      "official_hash": "0ce73f7392c3aadb60632154ccbf2f8ecbde1909",
+      "official_hash_type": "git-blob-sha1",
+      "lines": 58709,
+      "whitespace_tokens": 1531437
+    },
+    {
+      "path": "English/10M/switchboard.train.txt",
+      "source_url": "https://huggingface.co/datasets/BabyLM-community/BabyLM-2026-Strict-Small/resolve/c92ab16b4f08858304b0815706065b3354d8fc0a/switchboard.train.txt",
+      "size_bytes": 122528,
+      "sha256": "89c99649777be2f76f5054e9f1aa364b7e1a62844e219fe810205be6d99399b5",
+      "official_hash": "cefbf3bee72c027125845d093ff11ad87f0f5173",
+      "official_hash_type": "git-blob-sha1",
+      "lines": 2892,
+      "whitespace_tokens": 24791
+    },
+    {
+      "path": "English/100M/README.md",
+      "source_url": "https://huggingface.co/datasets/BabyLM-community/BabyLM-2026-Strict/resolve/9e57baaaa91ac3c638746be14d1d5fa6c789f4cf/README.md",
+      "size_bytes": 2554,
+      "sha256": "aa2447288dbc55b162fb763af962484f7d03b5161c602af1a61085110ab2a0ef",
+      "official_hash": "8aa157e73feec34a88bd730c881ba6ea0af6c0a9",
+      "official_hash_type": "git-blob-sha1"
+    },
+    {
+      "path": "English/100M/bnc_spoken.train.txt",
+      "source_url": "https://huggingface.co/datasets/BabyLM-community/BabyLM-2026-Strict/resolve/9e57baaaa91ac3c638746be14d1d5fa6c789f4cf/bnc_spoken.train.txt",
+      "size_bytes": 39534314,
+      "sha256": "4f6cc76f656d5666941852196e35fb5f060bcbb8abebb0b70fe17c3802428a0c",
+      "official_hash": "4f6cc76f656d5666941852196e35fb5f060bcbb8abebb0b70fe17c3802428a0c",
+      "official_hash_type": "sha256",
+      "lines": 803341,
+      "whitespace_tokens": 7620671
+    },
+    {
+      "path": "English/100M/childes.train.txt",
+      "source_url": "https://huggingface.co/datasets/BabyLM-community/BabyLM-2026-Strict/resolve/9e57baaaa91ac3c638746be14d1d5fa6c789f4cf/childes.train.txt",
+      "size_bytes": 152297628,
+      "sha256": "d6c0e39e2c283bfa5489cde80031a4fb9237ca8065a8301580df10e3b6843a98",
+      "official_hash": "d6c0e39e2c283bfa5489cde80031a4fb9237ca8065a8301580df10e3b6843a98",
+      "official_hash_type": "sha256",
+      "lines": 5638783,
+      "whitespace_tokens": 28410878
+    },
+    {
+      "path": "English/100M/gutenberg.train.txt",
+      "source_url": "https://huggingface.co/datasets/BabyLM-community/BabyLM-2026-Strict/resolve/9e57baaaa91ac3c638746be14d1d5fa6c789f4cf/gutenberg.train.txt",
+      "size_bytes": 141116557,
+      "sha256": "ee404a84c2f42e0cd52bdaa0366cf398328be1b038ede33d07851f69ea1c2837",
+      "official_hash": "ee404a84c2f42e0cd52bdaa0366cf398328be1b038ede33d07851f69ea1c2837",
+      "official_hash_type": "sha256",
+      "lines": 661928,
+      "whitespace_tokens": 25576896
+    },
+    {
+      "path": "English/100M/open_subtitles.train.txt",
+      "source_url": "https://huggingface.co/datasets/BabyLM-community/BabyLM-2026-Strict/resolve/9e57baaaa91ac3c638746be14d1d5fa6c789f4cf/open_subtitles.train.txt",
+      "size_bytes": 121187495,
+      "sha256": "9aa48a9448ce6450238868537e4aab43065cca5dae94c948a189e5b802911929",
+      "official_hash": "9aa48a9448ce6450238868537e4aab43065cca5dae94c948a189e5b802911929",
+      "official_hash_type": "sha256",
+      "lines": 3824550,
+      "whitespace_tokens": 22828747
+    },
+    {
+      "path": "English/100M/simple_wiki.train.txt",
+      "source_url": "https://huggingface.co/datasets/BabyLM-community/BabyLM-2026-Strict/resolve/9e57baaaa91ac3c638746be14d1d5fa6c789f4cf/simple_wiki.train.txt",
+      "size_bytes": 87947184,
+      "sha256": "b7cd8fd945d3986c673bf92fa28df44bf8e4ea655c37c2cacd97cdd8a9146cf2",
+      "official_hash": "b7cd8fd945d3986c673bf92fa28df44bf8e4ea655c37c2cacd97cdd8a9146cf2",
+      "official_hash_type": "sha256",
+      "lines": 642735,
+      "whitespace_tokens": 15314317
+    },
+    {
+      "path": "English/100M/switchboard.train.txt",
+      "source_url": "https://huggingface.co/datasets/BabyLM-community/BabyLM-2026-Strict/resolve/9e57baaaa91ac3c638746be14d1d5fa6c789f4cf/switchboard.train.txt",
+      "size_bytes": 1219017,
+      "sha256": "2cb1ed1b47300893b29254081830899c80ac174278b1c1abcade2887821265b1",
+      "official_hash": "e40a65671f5c9e1bcc15e6f7b3185ad50783cd72",
+      "official_hash_type": "git-blob-sha1",
+      "lines": 30559,
+      "whitespace_tokens": 248491
+    },
+    {
+      "path": "German/108M/README.md",
+      "source_url": "https://huggingface.co/datasets/BabyLM-community/babylm-deu/resolve/69ff474c64a7e0df3a473b1b5d968a0fc18478ac/README.md",
+      "size_bytes": 3836,
+      "sha256": "9ddd3c0aca64684ff83770ae92864bd209eefd25312cb56f9f465c681e6cad08",
+      "official_hash": "ebfa24c0230e614d00ab7dcc3a8103d29313e8c8",
+      "official_hash_type": "git-blob-sha1"
+    },
+    {
+      "path": "German/108M/train-00000-of-00002.parquet",
+      "source_url": "https://huggingface.co/datasets/BabyLM-community/babylm-deu/resolve/69ff474c64a7e0df3a473b1b5d968a0fc18478ac/data/train-00000-of-00002.parquet",
+      "size_bytes": 49269506,
+      "sha256": "b93ab79502a6927d32de8e2ec213a94e9815f9a3226dfce7cbe2a53011fa249c",
+      "official_hash": "b93ab79502a6927d32de8e2ec213a94e9815f9a3226dfce7cbe2a53011fa249c",
+      "official_hash_type": "sha256",
+      "rows": 18275,
+      "whitespace_tokens": 14597081
+    },
+    {
+      "path": "German/108M/train-00001-of-00002.parquet",
+      "source_url": "https://huggingface.co/datasets/BabyLM-community/babylm-deu/resolve/69ff474c64a7e0df3a473b1b5d968a0fc18478ac/data/train-00001-of-00002.parquet",
+      "size_bytes": 279577020,
+      "sha256": "98d11a94905cac1a625a3a70e9d776ec73749bf1f90fda5004af988e77b24201",
+      "official_hash": "98d11a94905cac1a625a3a70e9d776ec73749bf1f90fda5004af988e77b24201",
+      "official_hash_type": "sha256",
+      "rows": 18275,
+      "whitespace_tokens": 93313758
+    },
+    {
+      "path": "German/108M/dataset_metadata.json",
+      "source_url": "https://huggingface.co/datasets/BabyLM-community/babylm-deu/resolve/69ff474c64a7e0df3a473b1b5d968a0fc18478ac/dataset_metadata.json",
+      "size_bytes": 181,
+      "sha256": "e864bdd7f565973dbf423e1e22e4e7212f5062023608f4d5f8990e8fa1d4161d",
+      "official_hash": "0df0e5aae6164af928422f506dcf57cec33c971e",
+      "official_hash_type": "git-blob-sha1"
+    }
+  ]
+}

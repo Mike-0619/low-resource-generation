@@ -1,0 +1,14 @@
+reports:
+  - "results/gpt2/10m_seed_42/report_parapluie.json"
+  - "results/gpt2/100m_seed_42/report_parapluie.json"
+  - "results/llama3/simple_zero_shot/report_parapluie.json"
+  - "results/llama3/zero_shot_preserve/report_parapluie.json"
+  - "results/llama3/few_shot/report_parapluie.json"
+names:
+  - "10M"
+  - "100M"
+  - "Llama_Simple"
+  - "Llama_Preserve"
+  - "Llama_FewShot"
+output_json: "results/comparison/with_100m/central_database.json"
+output_csv: "results/comparison/with_100m/central_database.csv"

@@ -1,0 +1,6 @@
+# Generated evaluation outputs
+/logs/
+/results/
+
+# Local historical summary
+/result.md

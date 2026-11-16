@@ -1,0 +1,6 @@
+# Experiment outputs
+/logs/
+/results/
+
+# Local model weights
+/models/
