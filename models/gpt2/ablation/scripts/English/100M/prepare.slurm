@@ -1,8 +1,8 @@
 #!/bin/bash
 
-#SBATCH --job-name=gpt2-ablation-prepare-en
-#SBATCH --output=models/gpt2/ablation/logs/English/prepare/%j.out
-#SBATCH --error=models/gpt2/ablation/logs/English/prepare/%j.err
+#SBATCH --job-name=gpt2-ablation-prepare-100m-en
+#SBATCH --output=models/gpt2/ablation/logs/English/100M/prepare/%j.out
+#SBATCH --error=models/gpt2/ablation/logs/English/100M/prepare/%j.err
 
 #SBATCH --partition=lrz-cpu
 #SBATCH --qos=cpu
@@ -19,22 +19,7 @@ cd models/gpt2/ablation
 export PYTHONDONTWRITEBYTECODE=1 OMP_NUM_THREADS=8 RAYON_NUM_THREADS=8
 
 uv run --active --no-sync python -u -m src.models.initialization \
-  --config configs/English/10M/shared_spans.yaml
-
-uv run --active --no-sync python -u -m src.data.clean_dataset \
-  --condition 10m_en_spans
-
-uv run --active --no-sync python -u -m src.data.clean_dataset \
-  --condition 10m_en_balanced
-
-uv run --active --no-sync python -u -m src.data.train_tokenizer \
-  --condition 10m_en_spans
-
-uv run --active --no-sync python -u -m src.data.data_utils \
-  --config configs/English/10M/shared_spans.yaml
-
-uv run --active --no-sync python -u -m src.data.data_utils \
-  --config configs/English/10M/balanced_batch.yaml
+  --config configs/English/100M/shared_spans.yaml
 
 uv run --active --no-sync python -u -m src.data.clean_dataset \
   --condition 100m_en_spans

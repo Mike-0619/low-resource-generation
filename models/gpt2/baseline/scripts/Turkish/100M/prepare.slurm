@@ -1,8 +1,8 @@
 #!/bin/bash
 
-#SBATCH --job-name=gpt2-baseline-prepare-tr
-#SBATCH --output=models/gpt2/baseline/logs/Turkish/prepare/%j.out
-#SBATCH --error=models/gpt2/baseline/logs/Turkish/prepare/%j.err
+#SBATCH --job-name=gpt2-baseline-prepare-100m-tr
+#SBATCH --output=models/gpt2/baseline/logs/Turkish/100M/prepare/%j.out
+#SBATCH --error=models/gpt2/baseline/logs/Turkish/100M/prepare/%j.err
 
 #SBATCH --partition=lrz-cpu
 #SBATCH --qos=cpu
@@ -16,9 +16,6 @@ source .env
 source .venv/bin/activate
 
 cd models/gpt2/baseline
-
-uv run --active --no-sync python -u -m src.data.clean_dataset \
-  --config configs/Turkish/10M.yaml
 
 uv run --active --no-sync python -u -m src.data.clean_dataset \
   --config configs/Turkish/100M.yaml

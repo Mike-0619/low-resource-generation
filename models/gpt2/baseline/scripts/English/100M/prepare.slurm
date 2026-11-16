@@ -1,8 +1,8 @@
 #!/bin/bash
 
-#SBATCH --job-name=gpt2-baseline-prepare-en
-#SBATCH --output=models/gpt2/baseline/logs/English/prepare/%j.out
-#SBATCH --error=models/gpt2/baseline/logs/English/prepare/%j.err
+#SBATCH --job-name=gpt2-baseline-prepare-100m-en
+#SBATCH --output=models/gpt2/baseline/logs/English/100M/prepare/%j.out
+#SBATCH --error=models/gpt2/baseline/logs/English/100M/prepare/%j.err
 
 #SBATCH --partition=lrz-cpu
 #SBATCH --qos=cpu
@@ -16,9 +16,6 @@ source .env
 source .venv/bin/activate
 
 cd models/gpt2/baseline
-
-uv run --active --no-sync python -u -m src.data.clean_dataset \
-  --config configs/English/10M.yaml
 
 uv run --active --no-sync python -u -m src.data.clean_dataset \
   --config configs/English/100M.yaml

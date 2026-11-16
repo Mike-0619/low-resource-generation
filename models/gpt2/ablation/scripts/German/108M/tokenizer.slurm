@@ -1,8 +1,8 @@
 #!/bin/bash
 
-#SBATCH --job-name=gpt2-ablation-tokenizer-100m-de
-#SBATCH --output=models/gpt2/ablation/logs/German/100M/tokenizer/%j.out
-#SBATCH --error=models/gpt2/ablation/logs/German/100M/tokenizer/%j.err
+#SBATCH --job-name=gpt2-ablation-tokenizer-108m-de
+#SBATCH --output=models/gpt2/ablation/logs/German/108M/tokenizer/%j.out
+#SBATCH --error=models/gpt2/ablation/logs/German/108M/tokenizer/%j.err
 
 #SBATCH --partition=lrz-cpu
 #SBATCH --qos=cpu
@@ -19,4 +19,4 @@ cd models/gpt2/ablation
 export PYTHONDONTWRITEBYTECODE=1 RAYON_NUM_THREADS=8
 
 uv run --active --no-sync python -u -m src.data.train_tokenizer \
-  --condition 100m_de_spans
+  --condition 108m_de_spans

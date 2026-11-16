@@ -64,7 +64,7 @@ class ConfigPathTest(unittest.TestCase):
                 "babylm-2026/English/100M", "BabyLM-community/BabyLM-2026-Strict",
                 "9e57baaaa91ac3c638746be14d1d5fa6c789f4cf",
             ),
-            ("German", "100M"): (
+            ("German", "108M"): (
                 "babylm-2026/German/108M", "BabyLM-community/babylm-deu",
                 "69ff474c64a7e0df3a473b1b5d968a0fc18478ac",
             ),

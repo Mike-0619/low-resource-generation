@@ -27,10 +27,10 @@ training:
   num_workers: 0
 
 condition:
-  name: 100m_de_spans
-  size: 100M
+  name: 108m_de_balanced
+  size: 108M
   language: German
-  variant: shared_spans
+  variant: balanced_batch
   dataset_repo_id: BabyLM-community/babylm-deu
   dataset_revision: 69ff474c64a7e0df3a473b1b5d968a0fc18478ac
   corpus_path: babylm-2026/German/108M

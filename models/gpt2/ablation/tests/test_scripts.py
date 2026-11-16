@@ -12,28 +12,24 @@ from src.training.utils import PROJECT_ROOT, SEEDS, VOCAB_SIZES
 FAMILIES = {
     ("English", "10M"): "10m_en",
     ("English", "100M"): "100m_en",
-    ("German", "100M"): "100m_de",
+    ("German", "108M"): "108m_de",
 }
 PROTOCOLS = ("shared_spans", "balanced_batch")
 PREFIX = "run --active --no-sync python -u -m "
 
 
 def expected_calls(relative, vocab_size, seed):
-    if relative.name == "prepare.slurm":
-        language = relative.parts[0]
-        sizes = ("10M", "100M") if language == "English" else ("100M",)
-        calls = [f"src.models.initialization --config configs/{language}/{sizes[0]}/shared_spans.yaml"]
-        for size in sizes:
-            condition = FAMILIES[language, size]
-            calls.extend([
-                f"src.data.clean_dataset --condition {condition}_spans",
-                f"src.data.clean_dataset --condition {condition}_balanced",
-                f"src.data.train_tokenizer --condition {condition}_spans",
-                *(f"src.data.data_utils --config configs/{language}/{size}/{protocol}.yaml"
-                  for protocol in PROTOCOLS),
-            ])
-        return calls
     language, size = relative.parts[:2]
+    if relative.name == "prepare.slurm":
+        condition = FAMILIES[language, size]
+        configs = f"configs/{language}/{size}"
+        return [
+            f"src.models.initialization --config {configs}/shared_spans.yaml",
+            f"src.data.clean_dataset --condition {condition}_spans",
+            f"src.data.clean_dataset --condition {condition}_balanced",
+            f"src.data.train_tokenizer --condition {condition}_spans",
+            *(f"src.data.data_utils --config {configs}/{protocol}.yaml" for protocol in PROTOCOLS),
+        ]
     if relative.name == "tokenizer.slurm":
         return [f"src.data.train_tokenizer --condition {FAMILIES[language, size]}_spans"]
     protocol = relative.parts[2]
@@ -46,7 +42,7 @@ def expected_calls(relative, vocab_size, seed):
 class LauncherTest(unittest.TestCase):
     def test_scripts_from_project_root_and_slurm_copy(self):
         scripts = sorted((PROJECT_ROOT / "scripts").rglob("*.slurm"))
-        self.assertEqual(len(scripts), 17)
+        self.assertEqual(len(scripts), 18)
         self.assertEqual(
             {path.relative_to(PROJECT_ROOT / "scripts").as_posix()
              for path in scripts if path.name == "train.slurm"},
@@ -57,7 +53,7 @@ class LauncherTest(unittest.TestCase):
         self.assertEqual(
             {script.relative_to(PROJECT_ROOT / "scripts").as_posix()
              for script in scripts if script.name == "prepare.slurm"},
-            {"English/prepare.slurm", "German/prepare.slurm"},
+            {f"{language}/{size}/prepare.slurm" for language, size in FAMILIES},
         )
         self.assertFalse((PROJECT_ROOT / "scripts/prepare_all.slurm").exists())
         with tempfile.TemporaryDirectory() as tmp:
@@ -116,8 +112,7 @@ class LauncherTest(unittest.TestCase):
                     self.assertEqual(directives["output"], logs + ".out")
                     self.assertEqual(directives["error"], logs + ".err")
                 if is_prepare:
-                    language = relative.parts[0]
-                    logs = f"models/gpt2/ablation/logs/{language}/prepare/%j"
+                    logs = f"models/gpt2/ablation/logs/{relative.parent.as_posix()}/prepare/%j"
                     self.assertEqual(directives["output"], logs + ".out")
                     self.assertEqual(directives["error"], logs + ".err")
                     self.assertEqual(directives["partition"], "lrz-cpu")
@@ -125,6 +120,10 @@ class LauncherTest(unittest.TestCase):
                     self.assertEqual(directives["cpus-per-task"], "8")
                     self.assertEqual(directives["mem"], "64G")
                     self.assertEqual(directives["time"], "12:00:00")
+                if not is_train and not is_prepare:
+                    logs = f"models/gpt2/ablation/logs/{relative.parent.as_posix()}/{relative.stem}/%j"
+                    self.assertEqual(directives["output"], logs + ".out")
+                    self.assertEqual(directives["error"], logs + ".err")
                 shutil.copyfile(direct, spool)
                 for launcher in (direct, spool):
                     variants = (

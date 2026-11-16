@@ -85,7 +85,7 @@ class DataTest(unittest.TestCase):
                 batch["labels"][1].tolist(), [20, 2, -100, -100, -100]
             )
 
-        german = configs_for_condition("100m_de_balanced")[0]
+        german = configs_for_condition("108m_de_balanced")[0]
         with tempfile.TemporaryDirectory() as temporary:
             sources = sources_for(german.condition)
             cache = _build_cache(

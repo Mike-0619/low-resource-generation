@@ -53,10 +53,10 @@ INITIALIZATION_ROOT = PROJECT_ROOT / "initializations"
 CONFIG_PATHS = {
     "10m_en_spans": PROJECT_ROOT / "configs/English/10M/shared_spans.yaml",
     "100m_en_spans": PROJECT_ROOT / "configs/English/100M/shared_spans.yaml",
-    "100m_de_spans": PROJECT_ROOT / "configs/German/100M/shared_spans.yaml",
+    "108m_de_spans": PROJECT_ROOT / "configs/German/108M/shared_spans.yaml",
     "10m_en_balanced": PROJECT_ROOT / "configs/English/10M/balanced_batch.yaml",
     "100m_en_balanced": PROJECT_ROOT / "configs/English/100M/balanced_batch.yaml",
-    "100m_de_balanced": PROJECT_ROOT / "configs/German/100M/balanced_batch.yaml",
+    "108m_de_balanced": PROJECT_ROOT / "configs/German/108M/balanced_batch.yaml",
 }
 CONDITION_GROUPS = {
     variant: tuple(name for name, path in CONFIG_PATHS.items() if path.stem == variant)

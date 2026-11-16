@@ -67,7 +67,7 @@ class PrepareDataTest(unittest.TestCase):
             self.assertNotIn("\u5b57\u5e55 by Bob", subtitles)
 
     def test_german_cleaning_stats_and_document_boundaries(self) -> None:
-        config = configs_for_condition("100m_de_balanced")[0]
+        config = configs_for_condition("108m_de_balanced")[0]
         sources = sources_for(config.condition)
         rows = [{
             "text": (

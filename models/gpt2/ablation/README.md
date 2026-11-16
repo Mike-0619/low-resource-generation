@@ -16,14 +16,14 @@ Compare vocabulary sizes 512, 1,024, 2,048, 4,096, 8,192, and 16,384 across seed
 Place the raw corpora under `$CORPUS_ROOT/babylm-2026/`. Append `_spans` or
 `_balanced` to the condition prefix for the cleaning command.
 
-| Raw corpus | Condition prefix | Configurations |
-| --- | --- | --- |
-| `English/10M/` | `10m_en` | [shared_spans](configs/English/10M/shared_spans.yaml), [balanced_batch](configs/English/10M/balanced_batch.yaml) |
-| `English/100M/` | `100m_en` | [shared_spans](configs/English/100M/shared_spans.yaml), [balanced_batch](configs/English/100M/balanced_batch.yaml) |
-| `German/108M/` | `100m_de` | [shared_spans](configs/German/100M/shared_spans.yaml), [balanced_batch](configs/German/100M/balanced_batch.yaml) |
+| Experiment | Raw corpus | Condition prefix | Configurations | LRZ preparation |
+| --- | --- | --- | --- | --- |
+| English 10M | `English/10M/` | `10m_en` | [shared_spans](configs/English/10M/shared_spans.yaml), [balanced_batch](configs/English/10M/balanced_batch.yaml) | [prepare.slurm](scripts/English/10M/prepare.slurm) |
+| English 100M | `English/100M/` | `100m_en` | [shared_spans](configs/English/100M/shared_spans.yaml), [balanced_batch](configs/English/100M/balanced_batch.yaml) | [prepare.slurm](scripts/English/100M/prepare.slurm) |
+| German 108M | `German/108M/` | `108m_de` | [shared_spans](configs/German/108M/shared_spans.yaml), [balanced_batch](configs/German/108M/balanced_batch.yaml) | [prepare.slurm](scripts/German/108M/prepare.slurm) |
 
-The German 100M configurations use the full 108M corpus. English inputs are
-training text files, and German inputs are two Parquet shards. [Input filenames](src/data/clean_dataset.py)
+English inputs are training text files. German 108M uses the two full-corpus
+Parquet shards. [Input filenames](src/data/clean_dataset.py)
 
 ### Build training inputs
 
@@ -59,10 +59,10 @@ uv run --active --no-sync python -u -m src.training.train \
 
 ## Run on LRZ
 
-From the repository root, submit the [English](scripts/English/prepare.slurm)
-or [German](scripts/German/prepare.slurm) preparation job first. Create
-`logs/<language>/prepare/` under Ablation before submission. The job prepares
-both protocols for the language's configured sizes.
+From the repository root, submit the preparation job listed for the chosen
+corpus. Create `logs/<language>/<size>/prepare/` under Ablation first. The job
+reuses the shared initial weights, cleans both protocols, builds their common
+tokenizer, and prepares the shared-span cache before the balanced-batch cache.
 [Slurm submission guide](../../../README.md#running-and-submission)
 
 After preparation, submit the matching training script with one seed. Each
@@ -77,6 +77,10 @@ Training logs go to `logs/<language>/<size>/<protocol>/train/` under Ablation
 as `%A_%a.out` and `%A_%a.err`.
 
 ## Outputs
+
+The English 10M inputs use `data/English/10M/<protocol>/` for cleaned text
+and token caches, and `tokenizer/English/10M/` for the common tokenizer.
+Initial weights are shared across all corpora under `initializations/`.
 
 The example run writes to
 `results/English/10M/shared_spans/vocab_512/seed_42/`, with model files in

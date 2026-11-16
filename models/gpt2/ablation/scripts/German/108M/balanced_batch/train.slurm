@@ -1,8 +1,8 @@
 #!/bin/bash
 
-#SBATCH --job-name=gpt2-ablation-100m-de-balanced_batch
-#SBATCH --output=models/gpt2/ablation/logs/German/100M/balanced_batch/train/%A_%a.out
-#SBATCH --error=models/gpt2/ablation/logs/German/100M/balanced_batch/train/%A_%a.err
+#SBATCH --job-name=gpt2-ablation-108m-de-balanced_batch
+#SBATCH --output=models/gpt2/ablation/logs/German/108M/balanced_batch/train/%A_%a.out
+#SBATCH --error=models/gpt2/ablation/logs/German/108M/balanced_batch/train/%A_%a.err
 
 #SBATCH --partition=lrz-hgx-h100-94x4,lrz-hgx-a100-80x4,lrz-dgx-a100-80x8
 #SBATCH --qos=gpu
@@ -34,6 +34,6 @@ vocab_sizes=(512 1024 2048 4096 8192 16384)
 vocab_size="${vocab_sizes[SLURM_ARRAY_TASK_ID]}"
 
 uv run --active --no-sync python -u -m src.training.train \
-  --config configs/German/100M/balanced_batch.yaml \
+  --config configs/German/108M/balanced_batch.yaml \
   --vocab-size "$vocab_size" \
   --seed "$1"

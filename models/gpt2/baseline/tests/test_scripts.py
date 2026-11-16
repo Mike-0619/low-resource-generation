@@ -19,6 +19,7 @@ for language, sizes in PREPARATION_SIZES.items():
     script_dir = f"models/gpt2/baseline/scripts/{language}"
     for size in sizes:
         for stage, module, exports in (
+            ("prepare", "data.clean_dataset", {}),
             ("tokenizer", "data.train_tokenizer", {"RAYON_NUM_THREADS": "4"}),
             ("train", "training.train", {"OMP_NUM_THREADS": "8"}),
         ):
@@ -27,11 +28,6 @@ for language, sizes in PREPARATION_SIZES.items():
                               f"configs/{language}/{size}.yaml"]],
                 "exports": exports,
             }
-    EXPECTED[f"{script_dir}/prepare.slurm"] = {
-        "commands": [["python", "-u", "-m", "src.data.clean_dataset", "--config",
-                      f"configs/{language}/{size}.yaml"] for size in sizes],
-        "exports": {},
-    }
 
 class ScriptTests(unittest.TestCase):
     def setUp(self):
@@ -78,6 +74,9 @@ sys.exit(int(os.environ.get('FIXTURE_EXIT','0')))
         return [json.loads(line) for line in result.stdout.splitlines() if line.startswith('{')]
 
     def test_slurm_partition_and_qos_match_task(self):
+        script_root = ROOT / "models/gpt2/baseline/scripts"
+        self.assertEqual({path.relative_to(ROOT).as_posix() for path in script_root.rglob("*.slurm")},
+                         set(EXPECTED))
         for relative in EXPECTED:
             gpu = Path(relative).name == "train.slurm"
             lines = (ROOT / relative).read_text().splitlines()
@@ -87,6 +86,10 @@ sys.exit(int(os.environ.get('FIXTURE_EXIT','0')))
             self.assertEqual([line for line in lines if line.startswith('#SBATCH --qos=')],
                              ['#SBATCH --qos=' + ('gpu' if gpu else 'cpu')])
             self.assertEqual(any(line.startswith('#SBATCH --gres=') for line in lines), gpu)
+            language, size, filename = Path(relative).parts[-3:]
+            log = f"models/gpt2/baseline/logs/{language}/{size}/{Path(filename).stem}/%j"
+            self.assertIn(f"#SBATCH --output={log}.out", lines)
+            self.assertIn(f"#SBATCH --error={log}.err", lines)
 
     def test_training_host_memory_matches_corpus_size(self):
         for language, sizes in PREPARATION_SIZES.items():
@@ -110,14 +113,14 @@ sys.exit(int(os.environ.get('FIXTURE_EXIT','0')))
                         self.assertEqual(record['task_env'],expected['exports'])
                         self.assertTrue(record['api'])
 
-    def test_prepare_stops_when_the_first_size_fails(self):
-        for language in PREPARATION_SIZES:
-            relative = f"models/gpt2/baseline/scripts/{language}/prepare.slurm"
-            with self.subTest(language=language):
-                records = self.execute(relative, extra={"FIXTURE_EXIT": "23"}, code=23)
-                first = EXPECTED[relative]["commands"][0]
-                self.assertEqual([r["args"] for r in records],
-                                 [["run", "--active", "--no-sync", *first]])
+    def test_prepare_propagates_the_cleaning_exit_status(self):
+        for relative, expected in EXPECTED.items():
+            if relative.endswith("/prepare.slurm"):
+                with self.subTest(script=relative):
+                    records = self.execute(relative, extra={"FIXTURE_EXIT": "23"}, code=23)
+                    command, = expected["commands"]
+                    self.assertEqual([r["args"] for r in records],
+                                     [["run", "--active", "--no-sync", *command]])
 
     def test_environment_defaults_and_exported_overrides(self):
         job = next(iter(EXPECTED))
