@@ -1,6 +1,9 @@
 # utils/config_parser.py
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Optional
+
+from transformers import HfArgumentParser
 
 @dataclass
 class PipelineArguments:
@@ -47,4 +50,9 @@ class PipelineArguments:
     # Advanced Training Params
     gradient_accumulation_steps: int = field(default=4, metadata={"help": "Number of updates steps to accumulate before performing a backward/update pass."})
     gradient_checkpointing: bool = field(default=True, metadata={"help": "If True, use gradient checkpointing to save memory at the expense of slower backward pass."})
-    sft_loss_type: str = field(default="chunked_nll", metadata={"help": "Loss function type for SFT. Use 'nll' for standard HF models or 'chunked_nll' for Unsloth."})
+    sft_loss_type: str = field(default="nll", metadata={"help": "Loss function type for SFT."})
+
+
+def load_config(path: str | Path) -> PipelineArguments:
+    parser = HfArgumentParser((PipelineArguments,))
+    return parser.parse_yaml_file(yaml_file=Path(path).expanduser().resolve())[0]

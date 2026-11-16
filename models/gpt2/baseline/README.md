@@ -7,11 +7,11 @@ Train a GPT-2 model and tokenizer for each language and corpus size. Complete th
 
 ### Prepare raw corpora
 
-From the repository root, enter the Baseline directory and prepare English 10M.
+Load the root environment, then enter `models/gpt2/baseline/` and prepare English 10M.
 
 ```bash
 cd models/gpt2/baseline
-uv run --active --no-sync python -m src.corpora.prepare_babylm --dataset english-10m
+uv run --active --no-sync python -B -m src.corpora.prepare_babylm --dataset english-10m
 ```
 
 Raw corpus paths are relative to `$CORPUS_ROOT/babylm-2026/`.
@@ -33,11 +33,11 @@ Use `--dataset all` to prepare all raw corpora. The builder reuses matching file
 
 ### Clean and tokenize
 
-Run from the Baseline directory.
+Run both commands from `models/gpt2/baseline/`.
 
 ```bash
-uv run --active --no-sync python -u -m src.data.clean_dataset --config configs/English/10M.yaml
-uv run --active --no-sync python -u -m src.data.train_tokenizer --config configs/English/10M.yaml
+uv run --active --no-sync python -B -u -m src.data.clean_dataset --config configs/English/10M.yaml
+uv run --active --no-sync python -B -u -m src.data.train_tokenizer --config configs/English/10M.yaml
 ```
 
 ## Train a model
@@ -46,13 +46,18 @@ Use the same YAML on a supported CUDA GPU. Training builds the token cache on
 demand. [BabyLM 2026 GPT-2 reference implementation at commit 127d0a5](https://github.com/babylm-org/babylm-baselines/blob/127d0a55def41e878afcfbd7dd85eb6732c2abdf/strict-gpt2/training.py)
 
 ```bash
-uv run --active --no-sync python -u -m src.training.train --config configs/English/10M.yaml
+uv run --active --no-sync python -B -u -m src.training.train --config configs/English/10M.yaml
 ```
 
 ## Run on LRZ
 
-Prepare the raw corpus first. Submit from the repository root and create each job's log directory first.
-[Slurm submission guide](../../../README.md#running-and-submission)
+Prepare the raw corpus first. From the repository root, create the log directories for the English 10M example.
+
+```bash
+mkdir -p models/gpt2/baseline/logs/English/10M/{prepare,tokenizer,train}
+```
+
+Submit each script using `sbatch` from the repository root. [Slurm submission guide](../../../README.md#running-and-submission)
 
 | Stage | English 10M example | Log directory under Baseline |
 | --- | --- | --- |
@@ -67,7 +72,7 @@ and size under [scripts/](scripts/) for other configurations.
 
 For English 10M, cleaned text is in `data/English/10M/cleaned/` and the tokenizer
 is in `tokenizer/English/10M/`. The run directory
-`results/English/10M/seed_42/` contains `final/` and `records/`.
+`results/English/10M/seed_42/` contains the model export in `final/`, training records in `records/`, and saved checkpoints in `checkpoints/`.
 
 ## Tests
 

@@ -1,0 +1,24 @@
+# Run and data
+mode: train
+stage: dpo
+seed: 42
+limit: null  # Use the full dataset when null.
+
+# SFT checkpoint input and DPO checkpoint output
+model_path: results/sft
+output_dir: results/dpo
+
+# Training
+epochs: 1
+batch_size: 32
+logging_steps: 50
+
+# Preference objective
+dpo_beta: 0.1
+dpo_loss_type: sigmoid
+
+# LoRA
+use_lora: false
+
+# Experiment tracking
+use_wandb: false

@@ -1,6 +1,6 @@
 # src/data/loader.py
 from datasets import load_dataset
-from src.data.formatter import format_sft_personachat, format_dpo_personachat
+from .formatter import format_sft_personachat, format_dpo_personachat
 
 def get_prepared_datasets(stage="sft", limit=None, dataset_name="bavard/personachat_truecased"):
     """

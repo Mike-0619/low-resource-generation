@@ -3,26 +3,26 @@ import json
 import argparse
 import glob
 import re
+from pathlib import Path
+
 import matplotlib.pyplot as plt
 
 def main():
-    # Resolve the script's directory and set the output directory relative to it (../figures)
-    SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-    DEFAULT_OUT_DIR = os.path.join(SCRIPT_DIR, "..", "figures")
-    DEFAULT_OUT_FILE = os.path.join(DEFAULT_OUT_DIR, "checkpoint_eval_metrics.png")
+    task_root = Path(__file__).resolve().parents[2]
+    DEFAULT_OUT_FILE = task_root / "results/figures/checkpoint_eval_metrics.png"
 
     # Set up argument parsing for the folder path
     parser = argparse.ArgumentParser(description="Plot evaluation metrics across model checkpoints.")
     parser.add_argument(
-        "-d", "--dir", 
-        type=str, 
-        required=True, 
+        "-d", "--dir",
+        type=str,
+        required=True,
         help="Relative or absolute path to the base directory containing eval JSON files."
     )
     parser.add_argument(
-        "-o", "--output", 
-        type=str, 
-        default=DEFAULT_OUT_FILE, 
+        "-o", "--output",
+        type=str,
+        default=DEFAULT_OUT_FILE,
         help="Output absolute or relative path for the plotted figure."
     )
     args = parser.parse_args()
@@ -49,7 +49,8 @@ def main():
                 continue
 
         # Extract step number for sorting (e.g., from 'rev_step100_seed_42')
-        match_step = re.search(r'step(\d+)', file_path)
+        checkpoint = f"{data.get('model_path', '')} {os.path.relpath(file_path, base_dir)}"
+        match_step = re.search(r"(?:checkpoint-|step)(\d+)", checkpoint)
         if match_step:
             step_num = int(match_step.group(1))
             cp_name = f"step{step_num}"
@@ -85,7 +86,7 @@ def main():
     # Extract data for plotting
     x_numeric = [cp["step"] if cp["step"] > 0 else 0.5 for cp in checkpoints_data]
     x_labels = [cp["name"] for cp in checkpoints_data]
-    
+
     y_hits1 = [cp["hits_at_1"] for cp in checkpoints_data]
     y_hits5 = [cp["hits_at_5"] for cp in checkpoints_data]
     y_mrr = [cp["mrr"] for cp in checkpoints_data]
@@ -105,16 +106,16 @@ def main():
     for i, (y_data, ylabel, color, marker) in enumerate(metrics):
         ax = axes[i]
         ax.plot(x_numeric, y_data, marker=marker, linestyle='-', color=color, linewidth=2, markersize=8)
-        
+
         # APPLY LOG SCALE TO X-AXIS
         ax.set_xscale('log')
-        
+
         # Format the X-axis to show the actual checkpoint names instead of scientific notation
         ax.set_xticks(x_numeric)
         ax.set_xticklabels(x_labels, rotation=45, ha='right')
-        
+
         ax.set_title(f'{ylabel.split(" ")[0]} over Training Time', fontsize=14, fontweight='bold')
-        ax.set_xlabel('Pre-training Steps (Log Scale)', fontsize=12)
+        ax.set_xlabel('Checkpoint step (log scale)', fontsize=12)
         ax.set_ylabel(ylabel, fontsize=12)
         ax.grid(True, which="both", linestyle='--', alpha=0.5)
 

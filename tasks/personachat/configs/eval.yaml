@@ -1,0 +1,10 @@
+# Run and data
+mode: eval
+stage: dpo
+seed: 42
+limit: null  # Evaluate the full validation split when null.
+
+# Model provenance, DPO checkpoint and evaluation report
+raw_model_name: meta-llama/Llama-3.2-3B
+model_path: results/dpo
+output_dir: results/eval/dpo

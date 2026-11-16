@@ -1,12 +1,25 @@
 # src/training/trainer.py
 import os
 import wandb
+from transformers import TrainerCallback
 from trl import SFTConfig, SFTTrainer, DPOConfig, DPOTrainer
 
-from src.models.builder import build_model_and_tokenizer
-from src.models.peft_setup import get_peft_config
-from src.data.loader import get_prepared_datasets
-from utils.cleanup import DynamicCleanupCallback
+from ..data.loader import get_prepared_datasets
+from ..models.builder import build_model_and_tokenizer
+from ..models.peft_setup import get_peft_config
+
+
+class DynamicCleanupCallback(TrainerCallback):
+    """Callback to clean up heavy optimizer files after each checkpoint save."""
+    def on_save(self, args, state, control, **kwargs):
+        checkpoint_dir = os.path.join(args.output_dir, f"checkpoint-{state.global_step}")
+        if os.path.exists(checkpoint_dir):
+            print(f"\n[Callback] Cleaning up optimizer files at {checkpoint_dir}...")
+            for file_name in ["optimizer.pt", "scheduler.pt", "rng_state.pth"]:
+                file_path = os.path.join(checkpoint_dir, file_name)
+                if os.path.exists(file_path):
+                    os.remove(file_path)
+
 
 def run_personachat_finetune(args):
     """
@@ -69,10 +82,6 @@ def run_personachat_finetune(args):
         print("--- STARTING SUPERVISED FINE-TUNING (SFT) ---")
         sft_lr = 2e-4 if args.use_lora else args.lr
 
-        # is_gpt_neox = getattr(model.config, "model_type", "") == "gpt_neox"
-        # optimal_loss_type = "nll" if is_gpt_neox else "chunked_nll"
-        # print(f"Model type: {model.config.model_type} | Using loss_type: {optimal_loss_type}")
-        
         training_args = SFTConfig(
             output_dir=args.output_dir,
             num_train_epochs=args.epochs,

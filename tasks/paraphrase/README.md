@@ -1,28 +1,32 @@
-# Paraphrase generation
+# Paraphrase Generation
 
 Fine-tune GPT-2 on MRPC, compare with Llama 3.2 3B, and evaluate the
 generated paraphrases with SacreBLEU, ParaPLUIE and an optional local Qwen judge.
 
 ## Setup
 
-Follow the [root uv setup](../../README.md#setup). Launchers load the project's
-`.env` and root `.venv`. Run both `sbatch` and `bash` from the project root.
-Create the job log directories before submitting:
+Complete the [project setup](../../README.md#setup). The GPT-2 jobs need the
+English Baseline model exports for the sizes you plan to run. [Baseline training](../../models/gpt2/baseline/README.md#train-a-model)
+
+## Running on LRZ
+
+Run `sbatch` or `bash` from the repository root. Create the job log directories first.
 
 ```bash
 mkdir -p tasks/paraphrase/logs/{gpt2,llama3,comparison,pipeline}
 ```
 
-## Running on LRZ
-
 | Job | Slurm file under `scripts/` | YAML under `configs/` |
 | --- | --- | --- |
-| GPT-2 10M fine-tuning, BLEU and ParaPLUIE | `gpt2/gpt2_10m.slurm` | `gpt2/gpt2_10m.yaml` |
-| GPT-2 100M fine-tuning, BLEU and ParaPLUIE | `gpt2/gpt2_100m.slurm` | `gpt2/gpt2_100m.yaml` |
-| Llama inference and scoring for all three prompts | `llama3/llama3.slurm` | `llama3/llama3.yaml` |
-| Aggregate reports by sample ID (CPU) | `comparison/aggregate.slurm` | `comparison/aggregate_with_100m.yaml`, `comparison/aggregate_without_100m.yaml` |
-| Score the aggregate with Qwen (GPU) | `comparison/judge.slurm` | `comparison/judge_with_100m.yaml`, `comparison/judge_without_100m.yaml` |
-| Run the full experiment | `pipeline.slurm` | Selects the configs above for each stage |
+| GPT-2 10M fine-tuning, BLEU and ParaPLUIE | [gpt2/gpt2_10m.slurm](scripts/gpt2/gpt2_10m.slurm) | [gpt2/gpt2_10m.yaml](configs/gpt2/gpt2_10m.yaml) |
+| GPT-2 100M fine-tuning, BLEU and ParaPLUIE | [gpt2/gpt2_100m.slurm](scripts/gpt2/gpt2_100m.slurm) | [gpt2/gpt2_100m.yaml](configs/gpt2/gpt2_100m.yaml) |
+| Llama inference and scoring for all three prompts | [llama3/llama3.slurm](scripts/llama3/llama3.slurm) | [llama3/llama3.yaml](configs/llama3/llama3.yaml) |
+| Aggregate reports by sample ID (CPU) | [comparison/aggregate.slurm](scripts/comparison/aggregate.slurm) | [comparison/aggregate_with_100m.yaml](configs/comparison/aggregate_with_100m.yaml), [comparison/aggregate_without_100m.yaml](configs/comparison/aggregate_without_100m.yaml) |
+| Score the aggregate with Qwen (GPU) | [comparison/judge.slurm](scripts/comparison/judge.slurm) | [comparison/judge_with_100m.yaml](configs/comparison/judge_with_100m.yaml), [comparison/judge_without_100m.yaml](configs/comparison/judge_without_100m.yaml) |
+| Run the full experiment | [pipeline.slurm](scripts/pipeline.slurm) | Selects the configs above for each stage |
+
+The GPT-2 and Llama jobs can use H100 or A100. The judge and full pipeline
+request H100. The standalone aggregate job uses CPU.
 
 Submit 10M and Llama for either comparison. Include 100M for the full comparison.
 
@@ -32,7 +36,7 @@ sbatch tasks/paraphrase/scripts/llama3/llama3.slurm
 sbatch tasks/paraphrase/scripts/gpt2/gpt2_100m.slurm  # full comparison only
 ```
 
-After those jobs finish, submit the aggregate. Once it succeeds, submit the judge.
+After the model jobs succeed, submit the aggregate. Submit the optional judge after aggregation succeeds.
 
 ```bash
 sbatch tasks/paraphrase/scripts/comparison/aggregate.slurm
@@ -47,7 +51,7 @@ sbatch tasks/paraphrase/scripts/comparison/aggregate.slurm --config configs/comp
 sbatch tasks/paraphrase/scripts/comparison/judge.slurm --config configs/comparison/judge_without_100m.yaml
 ```
 
-To run the complete experiment in one job:
+To run the complete experiment in one job, prepare the local judge first.
 
 ```bash
 sbatch tasks/paraphrase/scripts/pipeline.slurm
@@ -86,11 +90,12 @@ paths. When changing the training seed, choose a matching run directory and
 update dependent report paths. Generation, scoring and aggregation require
 fresh output paths. The judge resumes an existing output for the same comparison.
 
-For a single Python stage, load the root environment and run:
+For a single scoring stage, load the root environment and enter `tasks/paraphrase/`.
+This example reads the GPT-2 10M generation report specified in the YAML.
 
 ```bash
 cd tasks/paraphrase
-uv run --active --no-sync python -m src.training.pipeline \
+uv run --active --no-sync python -B -m src.training.pipeline \
   --mode parapluie --config configs/gpt2/gpt2_10m.yaml
 ```
 
@@ -104,20 +109,28 @@ that sample IDs, source texts and references match across systems.
 
 ## Optional local judge
 
-Set CUDA_ROOT to your CUDA 13.2 toolkit directory. Run from the project root
-after loading the root environment.
+Set `CUDA_ROOT` to your CUDA 13.2 toolkit directory, with `bin/nvcc`, CUDA
+headers, and cuBLAS available. Build the optional judge dependency from the
+repository root with the project environment active.
 
 ```bash
-CUDA_ROOT="/path/to/cuda-13.2"
 export PATH="$CUDA_ROOT/bin:$PATH"
 export CUDACXX="$CUDA_ROOT/bin/nvcc"
 export CMAKE_ARGS="-DGGML_CUDA=ON -DCUDAToolkit_ROOT=$CUDA_ROOT -DCMAKE_CUDA_ARCHITECTURES=80;90"
 uv sync --locked --group judge --no-binary-package llama-cpp-python
 ```
 
-The toolkit must include the CUDA headers and cuBLAS. The launcher uses CUDA libraries from the root
-`.venv`. Run on an allocated NVIDIA GPU and supply the
-configured GGUF model files for judge runs.
+From the repository root, enter `tasks/paraphrase/` and download the GGUF
+shards used by the default judge configs.
+
+```bash
+cd tasks/paraphrase
+uv run --active --no-sync python -B -m src.models.download
+```
+
+The shards go under `tasks/paraphrase/models/UD-IQ4_NL/`. Each judge YAML
+points to the first shard. For Slurm, return to the repository root before
+submitting. The launcher loads CUDA libraries from the root `.venv`.
 
 ## Source layout
 
@@ -132,5 +145,5 @@ Load the [root offline-test environment](../../README.md#offline-tests), then
 run from the project root:
 
 ```bash
-uv run --active --locked --no-sync python -B -m unittest discover -s tasks/paraphrase/tests
+uv run --active --no-sync python -B -m unittest discover -s tasks/paraphrase/tests
 ```

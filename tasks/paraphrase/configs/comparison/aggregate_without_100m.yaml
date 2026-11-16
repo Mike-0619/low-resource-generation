@@ -1,12 +1,17 @@
+# Input reports
 reports:
   - "results/gpt2/10m_seed_42/report_parapluie.json"
   - "results/llama3/simple_zero_shot/report_parapluie.json"
   - "results/llama3/zero_shot_preserve/report_parapluie.json"
   - "results/llama3/few_shot/report_parapluie.json"
+
+# Model labels in the same order as reports
 names:
   - "10M"
   - "Llama_Simple"
   - "Llama_Preserve"
   - "Llama_FewShot"
+
+# Aggregated outputs
 output_json: "results/comparison/without_100m/central_database.json"
 output_csv: "results/comparison/without_100m/central_database.csv"

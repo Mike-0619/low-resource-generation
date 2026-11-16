@@ -1,6 +1,11 @@
+# Judge weights, aggregated input and scoring output
 judge_model_path: "models/UD-IQ4_NL/Qwen3.5-122B-A10B-UD-IQ4_NL-00001-of-00003.gguf"
 db_path: "results/comparison/with_100m/central_database.json"
 output_path: "results/comparison/with_100m/llm_judge_results.json"
+
+# Scoring options
 max_new_tokens: 16
-limit_samples: null
-port: 8000
+limit_samples: null  # Score all samples when null.
+
+# Local server
+port: 8000  # Default client port. The Slurm launcher selects a free port.

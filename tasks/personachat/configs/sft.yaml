@@ -1,0 +1,26 @@
+# Run and data
+mode: train
+stage: sft
+seed: 42
+limit: null  # Use the full dataset when null.
+
+# Base model and SFT checkpoint
+model_path: meta-llama/Llama-3.2-3B
+output_dir: results/sft
+
+# Training
+epochs: 1
+batch_size: 32
+lr: 5.0e-5
+logging_steps: 50
+sft_loss_type: nll
+
+# LoRA
+use_lora: false
+lora_r: 8
+lora_alpha: 16
+
+# Experiment tracking
+use_wandb: false
+wandb_project: babylm_finetune
+wandb_run_name: llama_lora_sft_run

@@ -4,7 +4,7 @@
 #SBATCH --output=tasks/paraphrase/logs/llama3/%x-%j.out
 #SBATCH --error=tasks/paraphrase/logs/llama3/%x-%j.err
 
-#SBATCH --partition=lrz-hgx-h100-94x4
+#SBATCH --partition=lrz-hgx-h100-94x4,lrz-hgx-a100-80x4,lrz-dgx-a100-80x8
 #SBATCH --qos=gpu
 #SBATCH --gres=gpu:1
 #SBATCH --ntasks=1

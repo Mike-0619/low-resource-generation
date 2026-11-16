@@ -1,4 +1,7 @@
-# Generated training and evaluation outputs
+# Generated outputs
 /logs/
-/outputs/
 /results/
+
+# Legacy output directories
+/outputs/
+/figures/

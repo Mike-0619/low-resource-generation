@@ -51,7 +51,8 @@ class ScriptTests(unittest.TestCase):
 print(json.dumps({'args':sys.argv[1:], 'cwd':os.getcwd(),
  'venv':os.environ.get('VIRTUAL_ENV'), 'corpus':os.environ.get('CORPUS_ROOT'),
  'cache':os.environ.get('HF_HOME'), 'datasets':os.environ.get('HF_DATASETS_CACHE'),
- 'uv_cache':os.environ.get('UV_CACHE_DIR'), 'bytecode':os.environ.get('PYTHONDONTWRITEBYTECODE'),
+ 'xdg_cache':os.environ.get('XDG_CACHE_HOME'), 'uv_cache':os.environ.get('UV_CACHE_DIR'),
+ 'bytecode':os.environ.get('PYTHONDONTWRITEBYTECODE'),
  'api':os.environ.get('OPENAI_API_KEY') in ['DOTENV_FIXTURE_MARKER','EXPORTED_FIXTURE_MARKER'],
  'api_override':os.environ.get('OPENAI_API_KEY')=='EXPORTED_FIXTURE_MARKER',
  'task_env':{k:os.environ[k] for k in ['HF_HUB_OFFLINE','HF_DATASETS_OFFLINE','OMP_NUM_THREADS','RAYON_NUM_THREADS','CUDA_VISIBLE_DEVICES'] if k in os.environ}}))
@@ -126,9 +127,16 @@ sys.exit(int(os.environ.get('FIXTURE_EXIT','0')))
         job = next(iter(EXPECTED))
         record = self.execute(job)[0]
         self.assertEqual(record['corpus'], str(self.root / 'corpora'))
-        for key in ('cache', 'datasets', 'uv_cache', 'bytecode'):
+        self.assertEqual(record['xdg_cache'], str(self.root / '.cache'))
+        self.assertEqual(record['uv_cache'], str(self.root / '.cache/uv'))
+        for key in ('cache', 'datasets', 'bytecode'):
             self.assertIsNone(record[key])
+        shared_cache = str(self.temp / 'shared cache')
+        record = self.execute(job, extra={'XDG_CACHE_HOME': shared_cache})[0]
+        self.assertEqual(record['xdg_cache'], shared_cache)
+        self.assertEqual(record['uv_cache'], str(Path(shared_cache) / 'uv'))
         overrides = {
+            'XDG_CACHE_HOME': shared_cache,
             'HF_HOME': str(self.temp / 'custom/hf'),
             'HF_DATASETS_CACHE': str(self.temp / 'custom/datasets'),
             'UV_CACHE_DIR': str(self.temp / 'custom/uv'),
@@ -139,12 +147,17 @@ sys.exit(int(os.environ.get('FIXTURE_EXIT','0')))
         record = self.execute(job, extra=overrides)[0]
         self.assertEqual(record['cache'], overrides['HF_HOME'])
         self.assertEqual(record['datasets'], overrides['HF_DATASETS_CACHE'])
+        self.assertEqual(record['xdg_cache'], shared_cache)
         self.assertEqual(record['uv_cache'], overrides['UV_CACHE_DIR'])
         self.assertEqual(record['corpus'], overrides['CORPUS_ROOT'])
         self.assertEqual(record['bytecode'], '1')
         self.assertTrue(record['api_override'])
-        record = self.execute(job, extra={'CORPUS_ROOT': '', 'OPENAI_API_KEY': ''})[0]
+        record = self.execute(job, extra={
+            'CORPUS_ROOT': '', 'OPENAI_API_KEY': '', 'XDG_CACHE_HOME': '', 'UV_CACHE_DIR': '',
+        })[0]
         self.assertEqual(record['corpus'], str(self.root / 'corpora'))
+        self.assertEqual(record['xdg_cache'], str(self.root / '.cache'))
+        self.assertEqual(record['uv_cache'], str(self.root / '.cache/uv'))
         self.assertTrue(record['api'])
 
     def test_missing_setup_stops_before_execution(self):

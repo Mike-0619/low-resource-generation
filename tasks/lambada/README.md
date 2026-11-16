@@ -11,9 +11,8 @@ Online loading and offline fallback use the same configured Hugging Face dataset
 
 ## Usage
 
-Run all commands from the project root. Use `--limit N` for a sample subset or
-`--all` for the full dataset. LRZ job scripts are available in
-`tasks/lambada/scripts/`; see the root [submission guide](../../README.md#running-and-submission).
+Load the root environment and run all commands from the repository root. Use
+`--limit N` for a sample subset or `--all` for the full dataset.
 
 ### Local model
 
@@ -40,9 +39,22 @@ uv run --active --no-sync python -B -m tasks.lambada.src.greedy \
   --limit 20 --output_dir tasks/lambada/results/api-example
 ```
 
+## Run on LRZ
+
+Submit from the repository root. The English GPT-2 10M job uses the Baseline
+export and evaluates the full split.
+
+```bash
+mkdir -p tasks/lambada/logs/gpt2/English/10M/seed_42/full
+sbatch tasks/lambada/scripts/gpt2/English/10M.slurm
+```
+
+Create the matching log directory for the other [Slurm jobs](scripts/).
+Local model jobs accept H100 and A100. API jobs use CPU. [Slurm submission guide](../../README.md#running-and-submission)
+
 ## Outputs
 
-The directory specified by `--output_dir` contains:
+Each run writes the following files to `--output_dir`. The LRZ scripts put this directory under `tasks/lambada/results/`.
 
 | File | Contents |
 | --- | --- |

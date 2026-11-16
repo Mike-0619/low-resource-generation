@@ -13,8 +13,9 @@ Compare vocabulary sizes 512, 1,024, 2,048, 4,096, 8,192, and 16,384 across seed
 
 ### Raw corpora
 
-Place the raw corpora under `$CORPUS_ROOT/babylm-2026/`. Append `_spans` or
-`_balanced` to the condition prefix for the cleaning command.
+Use the raw corpora under `$CORPUS_ROOT/babylm-2026/`. [Raw corpus preparation](../baseline/README.md#prepare-raw-corpora)
+
+Append `_spans` or `_balanced` to the condition prefix for the cleaning command.
 
 | Experiment | Raw corpus | Condition prefix | Configurations | LRZ preparation |
 | --- | --- | --- | --- | --- |
@@ -27,15 +28,15 @@ Parquet shards. [Input filenames](src/data/clean_dataset.py)
 
 ### Build training inputs
 
-From the repository root, enter the Ablation directory. The English 10M example
+Load the root environment, then enter `models/gpt2/ablation/`. The English 10M example
 prepares shared initial weights, a nested tokenizer family, and the shared-span cache.
 
 ```bash
 cd models/gpt2/ablation
-uv run --active --no-sync python -u -m src.models.initialization --config configs/English/10M/shared_spans.yaml
-uv run --active --no-sync python -u -m src.data.clean_dataset --condition 10m_en_spans
-uv run --active --no-sync python -u -m src.data.train_tokenizer --condition 10m_en_spans
-uv run --active --no-sync python -u -m src.data.data_utils --config configs/English/10M/shared_spans.yaml
+uv run --active --no-sync python -B -u -m src.models.initialization --config configs/English/10M/shared_spans.yaml
+uv run --active --no-sync python -B -u -m src.data.clean_dataset --condition 10m_en_spans
+uv run --active --no-sync python -B -u -m src.data.train_tokenizer --condition 10m_en_spans
+uv run --active --no-sync python -B -u -m src.data.data_utils --config configs/English/10M/shared_spans.yaml
 ```
 
 For `balanced_batch`, reuse the tokenizer and initial weights. Keep the matching
@@ -43,8 +44,8 @@ For `balanced_batch`, reuse the tokenizer and initial weights. Keep the matching
 the additional data.
 
 ```bash
-uv run --active --no-sync python -u -m src.data.clean_dataset --condition 10m_en_balanced
-uv run --active --no-sync python -u -m src.data.data_utils --config configs/English/10M/balanced_batch.yaml
+uv run --active --no-sync python -B -u -m src.data.clean_dataset --condition 10m_en_balanced
+uv run --active --no-sync python -B -u -m src.data.data_utils --config configs/English/10M/balanced_batch.yaml
 ```
 
 ## Train a model
@@ -53,20 +54,23 @@ Run from the Ablation directory on a supported CUDA GPU. Use the corresponding
 YAML for the protocol you prepared.
 
 ```bash
-uv run --active --no-sync python -u -m src.training.train \
+uv run --active --no-sync python -B -u -m src.training.train \
   --config configs/English/10M/shared_spans.yaml --vocab-size 512 --seed 42
 ```
 
 ## Run on LRZ
 
-From the repository root, submit the preparation job listed for the chosen
-corpus. Create `logs/<language>/<size>/prepare/` under Ablation first. The job
-reuses the shared initial weights, cleans both protocols, builds their common
+From the repository root, submit the preparation job for the chosen corpus. It
+prepares shared initial weights, cleans both protocols, builds their common
 tokenizer, and prepares the shared-span cache before the balanced-batch cache.
-[Slurm submission guide](../../../README.md#running-and-submission)
 
-After preparation, submit the matching training script with one seed. Each
-array runs that seed's six vocabulary sizes.
+```bash
+mkdir -p models/gpt2/ablation/logs/English/10M/prepare
+sbatch models/gpt2/ablation/scripts/English/10M/prepare.slurm
+```
+
+After preparation succeeds, submit the matching training script with one seed.
+Each array trains that seed's six vocabulary sizes. [Slurm submission guide](../../../README.md#running-and-submission)
 
 ```bash
 mkdir -p models/gpt2/ablation/logs/English/10M/shared_spans/train
@@ -92,7 +96,7 @@ From the Ablation directory, use the original configuration, vocabulary size,
 and seed to resume an unfinished run from `checkpoints/last/`.
 
 ```bash
-uv run --active --no-sync python -u -m src.training.train \
+uv run --active --no-sync python -B -u -m src.training.train \
   --config configs/English/10M/shared_spans.yaml --vocab-size 512 --seed 42 --resume
 ```
 

@@ -9,9 +9,9 @@ from datasets import load_dataset
 from transformers import AutoTokenizer, AutoModelForCausalLM
 from peft import AutoPeftModelForCausalLM
 
-from src.evaluation.metrics import calculate_ranking_metrics, aggregate_scores
-from src.data.formatter import build_personachat_messages
-from src.models.builder import build_model_and_tokenizer
+from .metrics import calculate_ranking_metrics, aggregate_scores
+from ..data.formatter import build_personachat_messages
+from ..models.builder import build_model_and_tokenizer
 
 # Same precision for every model so scores are comparable across the results table
 EVAL_DTYPE = torch.bfloat16

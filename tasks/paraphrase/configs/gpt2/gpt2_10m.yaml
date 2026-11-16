@@ -1,26 +1,35 @@
+# Run and model artifacts
 seed: 42
 model_path: "../../models/gpt2/baseline/results/English/10M/seed_42/final"
 output_dir: "results/gpt2/10m_seed_42/final"
 report_path: "results/gpt2/10m_seed_42/report.json"
 parapluie_report_path: "results/gpt2/10m_seed_42/report_parapluie.json"
 
-# Fine-tuning
+# Fine-tuning data
 max_length: 256
-qqp_augment_size: 0
+qqp_augment_size: 0  # Set to 0 to train without QQP augmentation.
+
+# Training schedule and batching
 num_train_epochs: 10
 per_device_train_batch_size: 16
 gradient_accumulation_steps: 1
 per_device_eval_batch_size: 16
+
+# Optimizer and learning-rate schedule
 learning_rate: 0.0002
 weight_decay: 0.05
 warmup_steps: 100
 lr_scheduler_type: "cosine"
+
+# Logging and checkpoints
 logging_steps: 50
 eval_strategy: "epoch"
 save_strategy: "epoch"
 save_total_limit: 2
 load_best_model_at_end: true
 metric_for_best_model: "eval_loss"
+
+# Precision and reporting
 bf16: true
 tf32: true
 optim: "adamw_torch_fused"
