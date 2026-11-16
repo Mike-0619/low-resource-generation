@@ -66,4 +66,4 @@ Run the test command in the relevant module’s README. The offline suites use s
 
 ## License
 
-The repository retains its [Apache 2.0 license](LICENSE). The imported LRZ source includes its original [MIT license and copyright notice](LICENSE-MIT).
+This project is released under the [MIT License](LICENSE).
