@@ -1,13 +1,12 @@
 # PersonaChat
 
-Fine-tune a language model for persona-grounded dialogue and evaluate how well it
-ranks the correct response. The default run uses Llama 3.2 3B and the PersonaChat
-dataset. Follow the [project setup](../../README.md#setup) and sign in to
-Hugging Face if the configured model requires access.
+Fine-tune a model for persona-grounded dialogue and evaluate response ranking.
+The default uses Llama 3.2 3B and PersonaChat. Complete the
+[project setup](../../README.md#setup) and sign in to Hugging Face if needed.
 
 ## Run on LRZ
 
-Submit from the repository root. Create the four job log directories before submission.
+From the repository root, create the job log directories before submitting.
 
 ```bash
 mkdir -p tasks/personachat/logs/{sft,dpo,eval,pipeline}
@@ -20,12 +19,11 @@ mkdir -p tasks/personachat/logs/{sft,dpo,eval,pipeline}
 | Response ranking | [evaluation/eval.slurm](scripts/evaluation/eval.slurm) | [eval.yaml](configs/eval.yaml) | `results/eval/dpo/` |
 | SFT, DPO, evaluation and aggregation | [pipeline.slurm](scripts/pipeline.slurm) | All three defaults | Stage outputs and `results/aggregate/pipeline/dpo/` |
 
-For standalone jobs, submit SFT first, DPO after SFT succeeds, and evaluation
-after DPO succeeds. DPO reads the SFT checkpoint, and evaluation defaults to the
-DPO checkpoint. The pipeline runs all three stages and then summarizes the
-single report at `results/eval/dpo/dpo_eval_results.json`. It writes
-`compiled_results.csv` and `compiled_results.json` to
-`results/aggregate/pipeline/dpo/`. These paths are relative to `tasks/personachat/`.
+For standalone runs, submit SFT, DPO, then evaluation, waiting for each
+stage to succeed. Each stage uses the previous model output by default.
+The pipeline also summarizes `results/eval/dpo/dpo_eval_results.json` as
+`compiled_results.csv` and `compiled_results.json` in
+`results/aggregate/pipeline/dpo/` under `tasks/personachat/`.
 
 ```bash
 sbatch tasks/personachat/scripts/pipeline.slurm
@@ -34,10 +32,10 @@ sbatch tasks/personachat/scripts/pipeline.slurm
 SFT, DPO and the pipeline request H100. Standalone evaluation accepts H100
 or A100.
 
-Standalone jobs accept `--config FILE`. Relative config, model and output
-paths resolve from `tasks/personachat/`. To evaluate SFT or a saved checkpoint,
-copy `configs/eval.yaml` to `configs/my_eval.yaml` in the task directory and
-set `model_path` and `output_dir` for that run.
+Standalone jobs accept `--config FILE`. Relative paths resolve from
+`tasks/personachat/`. To evaluate SFT or a saved checkpoint, copy
+`configs/eval.yaml` to `configs/my_eval.yaml` and set `model_path` and
+`output_dir`.
 
 ```bash
 sbatch tasks/personachat/scripts/evaluation/eval.slurm --config configs/my_eval.yaml
@@ -67,10 +65,9 @@ Aggregation scans `results/eval/` by default and writes CSV and JSON under
 `results/aggregate/`. Pass `--file FILE` to summarize one report or `--dir DIR`
 to scan a different directory.
 
-To plot a checkpoint curve, evaluate several checkpoints of the same model.
-Use a separate eval config for each checkpoint, set `model_path` to that
-checkpoint, and write each report to its own subdirectory under
-`results/eval/checkpoints/`.
+For a checkpoint curve, set `model_path` in a separate config for each
+checkpoint of the same model. Save each report to its own subdirectory
+under `results/eval/checkpoints/`.
 
 ```bash
 bash tasks/personachat/scripts/evaluation/reports.sh plot --dir results/eval/checkpoints

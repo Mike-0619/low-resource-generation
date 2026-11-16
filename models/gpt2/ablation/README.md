@@ -13,9 +13,8 @@ Compare vocabulary sizes 512, 1,024, 2,048, 4,096, 8,192, and 16,384 across seed
 
 ### Raw corpora
 
-Use the raw corpora under `$CORPUS_ROOT/babylm-2026/`. [Raw corpus preparation](../baseline/README.md#prepare-raw-corpora)
-
-Append `_spans` or `_balanced` to the condition prefix for the cleaning command.
+Raw inputs are relative to `$CORPUS_ROOT/babylm-2026/`. For cleaning, append
+`_spans` or `_balanced` to the condition prefix.
 
 | Experiment | Raw corpus | Condition prefix | Configurations | LRZ preparation |
 | --- | --- | --- | --- | --- |
@@ -28,8 +27,7 @@ Parquet shards. [Input filenames](src/data/clean_dataset.py)
 
 ### Build training inputs
 
-Load the root environment, then enter `models/gpt2/ablation/`. The English 10M example
-prepares shared initial weights, a nested tokenizer family, and the shared-span cache.
+With the root environment active, prepare the English 10M `shared_spans` inputs.
 
 ```bash
 cd models/gpt2/ablation
@@ -39,9 +37,8 @@ uv run --active --no-sync python -B -u -m src.data.train_tokenizer --condition 1
 uv run --active --no-sync python -B -u -m src.data.data_utils --config configs/English/10M/shared_spans.yaml
 ```
 
-For `balanced_batch`, reuse the tokenizer and initial weights. Keep the matching
-`shared_spans` cache, which supplies the reference update count, then prepare
-the additional data.
+For `balanced_batch`, reuse the tokenizer and initial weights. Keep the
+`shared_spans` cache for the reference update count.
 
 ```bash
 uv run --active --no-sync python -B -u -m src.data.clean_dataset --condition 10m_en_balanced
@@ -60,9 +57,9 @@ uv run --active --no-sync python -B -u -m src.training.train \
 
 ## Run on LRZ
 
-From the repository root, submit the preparation job for the chosen corpus. It
-prepares shared initial weights, cleans both protocols, builds their common
-tokenizer, and prepares the shared-span cache before the balanced-batch cache.
+Submit from the repository root. The preparation job builds the shared
+weights, cleans both protocols, builds the tokenizer, then caches
+`shared_spans` before `balanced_batch`.
 
 ```bash
 mkdir -p models/gpt2/ablation/logs/English/10M/prepare

@@ -18,7 +18,7 @@ Train GPT-2 on BabyLM corpora, study how vocabulary size affects training, and e
 
 Use `uv` on Linux x86‑64. The lockfile targets Python 3.14 and PyTorch with CUDA 13.2. Training requires a compatible NVIDIA GPU.
 
-On a fresh clone, run these commands from the repository root. If you already have a `.env`, keep it and start with `source .env`.
+Run from the repository root. If `.env` already exists, start with `source .env`.
 
 ```bash
 cp .env.example .env
@@ -30,13 +30,11 @@ source .venv/bin/activate
 
 In a new shell, reload `.env`, set `PYTHONDONTWRITEBYTECODE=1`, and activate `.venv`.
 
-The example `.env` sets `XDG_CACHE_HOME` to the repository's `.cache/` and
-`UV_CACHE_DIR` to its `uv/` subdirectory. Hugging Face and the Baseline token
-cache also use this cache root by default. Git ignores `.cache/`. To share
-caches across projects, set `XDG_CACHE_HOME` to the same absolute path or
-set individual overrides such as `HF_HOME`, `HF_DATASETS_CACHE`, and
-`UV_CACHE_DIR`. On LRZ, keep the local `.env` that loads the shared workspace
-cache settings.
+The example `.env` defaults to `.cache/` for Hugging Face and Baseline tokens
+and `.cache/uv/` for uv. Git ignores `.cache/`. To share caches, set
+`XDG_CACHE_HOME` to a common absolute path. Override individual caches with
+`HF_HOME`, `HF_DATASETS_CACHE` or `UV_CACHE_DIR`. On LRZ, keep the local `.env`
+that loads the workspace cache settings.
 
 ## GPT-2 data
 
@@ -47,13 +45,16 @@ cd models/gpt2/baseline
 uv run --active --no-sync python -B -m src.corpora.prepare_babylm --dataset english-10m
 ```
 
-The default `CORPUS_ROOT` is `corpora/` under the repository root, so English 10M is written to `corpora/babylm-2026/English/10M/`. To share raw corpora across projects, set `CORPUS_ROOT` in each local `.env` to the same absolute path. This is the parent directory of `babylm-2026/`. Git ignores `.env` and the default corpus directory. [Corpus options and access requirements](models/gpt2/baseline/README.md#prepare-raw-corpora)
+English 10M lands in `corpora/babylm-2026/English/10M/` by default. To share
+raw corpora, set `CORPUS_ROOT` in each local `.env` to the same absolute path
+containing `babylm-2026/`. Git ignores `.env` and the default `corpora/`.
+[Corpus options and access requirements](models/gpt2/baseline/README.md#prepare-raw-corpora)
 
 ## Running and submission
 
 For English 10M, stay in `models/gpt2/baseline/`. Follow [Clean and tokenize](models/gpt2/baseline/README.md#clean-and-tokenize), then [Train a model](models/gpt2/baseline/README.md#train-a-model). All three commands use `configs/English/10M.yaml`.
 
-For Slurm, submit from the repository root and create the job’s log directory before submission. The scripts load the root `.env` and `.venv`. Their resource directives target LRZ. [Baseline Slurm guide](models/gpt2/baseline/README.md#run-on-lrz) · [Ablation Slurm guide](models/gpt2/ablation/README.md#run-on-lrz)
+Create the job log directory and submit from the repository root. Slurm scripts target LRZ and load the root `.env` and `.venv`. [Baseline Slurm guide](models/gpt2/baseline/README.md#run-on-lrz) · [Ablation Slurm guide](models/gpt2/ablation/README.md#run-on-lrz)
 
 ## API configuration
 

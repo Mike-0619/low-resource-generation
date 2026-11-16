@@ -7,7 +7,7 @@ Train a GPT-2 model and tokenizer for each language and corpus size. Complete th
 
 ### Prepare raw corpora
 
-Load the root environment, then enter `models/gpt2/baseline/` and prepare English 10M.
+With the root environment active, prepare English 10M.
 
 ```bash
 cd models/gpt2/baseline
@@ -33,7 +33,7 @@ Use `--dataset all` to prepare all raw corpora. The builder reuses matching file
 
 ### Clean and tokenize
 
-Run both commands from `models/gpt2/baseline/`.
+Stay in `models/gpt2/baseline/`.
 
 ```bash
 uv run --active --no-sync python -B -u -m src.data.clean_dataset --config configs/English/10M.yaml
@@ -51,13 +51,13 @@ uv run --active --no-sync python -B -u -m src.training.train --config configs/En
 
 ## Run on LRZ
 
-Prepare the raw corpus first. From the repository root, create the log directories for the English 10M example.
+After preparing the raw corpus, create the English 10M log directories from the repository root.
 
 ```bash
 mkdir -p models/gpt2/baseline/logs/English/10M/{prepare,tokenizer,train}
 ```
 
-Submit each script using `sbatch` from the repository root. [Slurm submission guide](../../../README.md#running-and-submission)
+Use `sbatch` to submit the stages in order. [Slurm submission guide](../../../README.md#running-and-submission)
 
 | Stage | English 10M example | Log directory under Baseline |
 | --- | --- | --- |
@@ -65,8 +65,7 @@ Submit each script using `sbatch` from the repository root. [Slurm submission gu
 | Train the tokenizer | [tokenizer.slurm](scripts/English/10M/tokenizer.slurm) | `logs/English/10M/tokenizer/` |
 | Pretrain GPT-2 | [train.slurm](scripts/English/10M/train.slurm) | `logs/English/10M/train/` |
 
-Wait for each stage to finish before starting the next. Use the matching language
-and size under [scripts/](scripts/) for other configurations.
+Wait for each stage to finish before submitting the next. For other configurations, match the language and size under [scripts/](scripts/).
 
 ## Outputs
 

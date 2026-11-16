@@ -5,8 +5,8 @@ generated paraphrases with SacreBLEU, ParaPLUIE and an optional local Qwen judge
 
 ## Setup
 
-Complete the [project setup](../../README.md#setup). The GPT-2 jobs need the
-English Baseline model exports for the sizes you plan to run. [Baseline training](../../models/gpt2/baseline/README.md#train-a-model)
+Complete the [project setup](../../README.md#setup) and export the English
+GPT-2 models for the selected sizes. [Baseline training](../../models/gpt2/baseline/README.md#train-a-model)
 
 ## Running on LRZ
 
@@ -25,8 +25,7 @@ mkdir -p tasks/paraphrase/logs/{gpt2,llama3,comparison,pipeline}
 | Score the aggregate with Qwen (GPU) | [comparison/judge.slurm](scripts/comparison/judge.slurm) | [comparison/judge_with_100m.yaml](configs/comparison/judge_with_100m.yaml), [comparison/judge_without_100m.yaml](configs/comparison/judge_without_100m.yaml) |
 | Run the full experiment | [pipeline.slurm](scripts/pipeline.slurm) | Selects the configs above for each stage |
 
-The GPT-2 and Llama jobs can use H100 or A100. The judge and full pipeline
-request H100. The standalone aggregate job uses CPU.
+GPT-2 and Llama jobs support H100 or A100. The judge and full pipeline request H100.
 
 Submit 10M and Llama for either comparison. Include 100M for the full comparison.
 
@@ -36,15 +35,14 @@ sbatch tasks/paraphrase/scripts/llama3/llama3.slurm
 sbatch tasks/paraphrase/scripts/gpt2/gpt2_100m.slurm  # full comparison only
 ```
 
-After the model jobs succeed, submit the aggregate. Submit the optional judge after aggregation succeeds.
+After the model jobs succeed, submit the aggregate. Run the optional judge after aggregation succeeds.
 
 ```bash
 sbatch tasks/paraphrase/scripts/comparison/aggregate.slurm
 sbatch tasks/paraphrase/scripts/comparison/judge.slurm
 ```
 
-Both scripts default to the comparison with 100M. For the comparison without
-100M, run the same two scripts in order with these configs.
+Both scripts include 100M by default. To omit it, use these configs in the same order.
 
 ```bash
 sbatch tasks/paraphrase/scripts/comparison/aggregate.slurm --config configs/comparison/aggregate_without_100m.yaml
@@ -57,10 +55,9 @@ To run the complete experiment in one job, prepare the local judge first.
 sbatch tasks/paraphrase/scripts/pipeline.slurm
 ```
 
-The pipeline includes 100M by default. Pass `--without-100m` to omit it.
-Use `--train_only` to stop after aggregation, or `--judge_only` to score an
-existing aggregate. Use `bash` in place of `sbatch` for a
-local run with the required resources.
+Use `--without-100m` to omit 100M, `--train_only` to stop after aggregation,
+or `--judge_only` to score an existing aggregate. Use `bash` instead of `sbatch`
+for a local run with the required resources.
 
 ## Configurations and results
 
@@ -77,18 +74,15 @@ from the project root. To override the training input, set `PATH_10M_BASE` or
 | Slurm job logs | `logs/<group>/%x-%j.out`, `logs/<group>/%x-%j.err` (experiment group, job name and ID) |
 | Judge service logs | `logs/comparison/server_<job-or-local>_<port>.log` for standalone jobs, `logs/pipeline/` for pipeline jobs |
 
-Independent launchers accept `--config FILE` to select a specific experiment
-YAML. Copy `configs/` to customize a run, preserving its `gpt2/`, `llama3/`,
-and `comparison/` subdirectories. Pass the copy to the pipeline with
-`--config-dir DIR`.
-These options take absolute paths or paths relative to `tasks/paraphrase/`.
-Relative model, input and output paths inside each YAML resolve from the task
-directory.
+Use `--config FILE` for standalone jobs or copy `configs/` for the pipeline
+and pass it with `--config-dir DIR`. Keep its `gpt2/`, `llama3/` and
+`comparison/` subdirectories. Both options accept absolute paths. Relative config, model,
+input and output paths resolve from `tasks/paraphrase/`.
 
-To reuse earlier reports, point the scoring or aggregation config to their
-paths. When changing the training seed, choose a matching run directory and
-update dependent report paths. Generation, scoring and aggregation require
-fresh output paths. The judge resumes an existing output for the same comparison.
+Point scoring or aggregation configs to existing reports to reuse them. For a
+new seed, update the run directory and dependent report paths. Generation,
+scoring and aggregation need fresh output paths. The judge resumes an
+existing output for the same comparison.
 
 For a single scoring stage, load the root environment and enter `tasks/paraphrase/`.
 This example reads the GPT-2 10M generation report specified in the YAML.
@@ -120,8 +114,7 @@ export CMAKE_ARGS="-DGGML_CUDA=ON -DCUDAToolkit_ROOT=$CUDA_ROOT -DCMAKE_CUDA_ARC
 uv sync --locked --group judge --no-binary-package llama-cpp-python
 ```
 
-From the repository root, enter `tasks/paraphrase/` and download the GGUF
-shards used by the default judge configs.
+Download the default judge's GGUF shards from `tasks/paraphrase/`.
 
 ```bash
 cd tasks/paraphrase

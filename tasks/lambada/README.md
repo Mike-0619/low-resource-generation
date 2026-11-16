@@ -11,13 +11,12 @@ Online loading and offline fallback use the same configured Hugging Face dataset
 
 ## Usage
 
-Load the root environment and run all commands from the repository root. Use
-`--limit N` for a sample subset or `--all` for the full dataset.
+Run from the repository root with the environment active. Use `--limit N`
+for a subset or `--all` for the full dataset.
 
 ### Local model
 
-The example evaluates the baseline English 10M export on 20 samples.
-The model directory must exist. Run on an allocated GPU.
+On an allocated GPU, evaluate the existing Baseline English 10M export on 20 samples.
 
 ```bash
 uv run --active --no-sync python -B -m tasks.lambada.src.greedy \
@@ -41,8 +40,7 @@ uv run --active --no-sync python -B -m tasks.lambada.src.greedy \
 
 ## Run on LRZ
 
-Submit from the repository root. The English GPT-2 10M job uses the Baseline
-export and evaluates the full split.
+The English GPT-2 10M job evaluates the full split using the Baseline export.
 
 ```bash
 mkdir -p tasks/lambada/logs/gpt2/English/10M/seed_42/full
@@ -72,8 +70,7 @@ overwrite; human annotations prevent overwrite.
 
 ## Tests
 
-Load the root [offline-test environment](../../README.md#offline-tests), then
-run from the project root:
+Load the [offline-test environment](../../README.md#offline-tests) before running.
 
 ```bash
 PYTHONPATH=. uv run --active --no-sync python -B -m unittest discover -s tasks/lambada/tests
