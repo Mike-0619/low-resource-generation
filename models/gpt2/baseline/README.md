@@ -27,7 +27,7 @@ Raw corpus paths are relative to `$CORPUS_ROOT/babylm-2026/`.
 
 - The [download inventory](src/corpora/download_manifest.json) pins upstream revisions and checksums.
 - The `german-10m` selector first prepares German 108M and then takes a deterministic 10% subset with 10,791,084 words. It preserves document order within each category and truncates the last selected document as needed.
-- The `turkish` selector prepares both sizes with the same BabyLM documents and deduplicated TurMix stream (seed 42). The 10M TurMix portion is a prefix of the 100M portion. Accept the [BabyLM access conditions](https://huggingface.co/datasets/BabyLM-community/babylm-tur) and run `uv run --active --no-sync hf auth login` first. [TurMix dataset](https://huggingface.co/datasets/AdaMLLab/TurMix)
+- The `turkish` selector prepares both sizes from the same `BabyLM-community/babylm-tur` documents and a deduplicated `AdaMLLab/TurMix` stream (seed 42). The 10M TurMix portion is a prefix of the 100M portion. Accept the BabyLM dataset's access conditions and run `uv run --active --no-sync hf auth login` first.
 
 Use `--dataset all` to prepare all raw corpora. The builder reuses matching files and reports conflicts. Derived corpora include a `manifest.json` with source and sampling details.
 
@@ -43,7 +43,7 @@ uv run --active --no-sync python -B -u -m src.data.train_tokenizer --config conf
 ## Train a model
 
 Use the same YAML on a supported CUDA GPU. Training builds the token cache on
-demand. [BabyLM 2026 GPT-2 reference implementation at commit 127d0a5](https://github.com/babylm-org/babylm-baselines/blob/127d0a55def41e878afcfbd7dd85eb6732c2abdf/strict-gpt2/training.py)
+demand.
 
 ```bash
 uv run --active --no-sync python -B -u -m src.training.train --config configs/English/10M.yaml
