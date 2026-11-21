@@ -16,7 +16,7 @@ uv run --active --no-sync python -B -m src.corpora.prepare_babylm --dataset engl
 
 Raw corpus paths are relative to `$CORPUS_ROOT/babylm-2026/`.
 
-| Experiment | Raw corpus | `--dataset` | Config | LRZ preparation |
+| Experiment | Raw corpus | `--dataset` | Config | Preparation |
 | --- | --- | --- | --- | --- |
 | English 10M | `English/10M/` | `english-10m` | [YAML](configs/English/10M.yaml) | [prepare.slurm](scripts/English/10M/prepare.slurm) |
 | English 100M | `English/100M/` | `english-100m` | [YAML](configs/English/100M.yaml) | [prepare.slurm](scripts/English/100M/prepare.slurm) |
@@ -49,7 +49,7 @@ demand.
 uv run --active --no-sync python -B -u -m src.training.train --config configs/English/10M.yaml
 ```
 
-## Run on LRZ
+## Run with Slurm
 
 After preparing the raw corpus, create the English 10M log directories from the repository root.
 

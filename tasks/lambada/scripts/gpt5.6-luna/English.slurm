@@ -4,8 +4,6 @@
 #SBATCH --output=tasks/lambada/logs/gpt5.6-luna/English/%j.out
 #SBATCH --error=tasks/lambada/logs/gpt5.6-luna/English/%j.err
 
-#SBATCH --partition=lrz-cpu
-#SBATCH --qos=cpu
 #SBATCH --cpus-per-task=2
 #SBATCH --mem=8G
 #SBATCH --time=01:30:00

@@ -4,8 +4,6 @@
 #SBATCH --output=models/gpt2/baseline/logs/Turkish/100M/tokenizer/%j.out
 #SBATCH --error=models/gpt2/baseline/logs/Turkish/100M/tokenizer/%j.err
 
-#SBATCH --partition=lrz-cpu
-#SBATCH --qos=cpu
 #SBATCH --cpus-per-task=4
 #SBATCH --mem=24G
 #SBATCH --time=02:00:00

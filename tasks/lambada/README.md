@@ -40,17 +40,17 @@ uv run --active --no-sync python -B -m tasks.lambada.src.greedy \
   --output_dir tasks/lambada/results/api-example
 ```
 
-## Run on LRZ
+## Run with Slurm
 
 The English GPT-2 10M job evaluates the full split using the Baseline export.
 
 ```bash
 mkdir -p tasks/lambada/logs/gpt2/English/10M
-sbatch tasks/lambada/scripts/gpt2/English/10M.slurm
+sbatch --partition=YOUR_GPU_PARTITION --gres=gpu:1 tasks/lambada/scripts/gpt2/English/10M.slurm
 ```
 
 Create the matching log directory for the other [Slurm jobs](scripts/).
-Local model jobs accept H100 and A100. API jobs use CPU. [Slurm submission guide](../../README.md#running-and-submission)
+Local model jobs request one GPU. API jobs use CPU. [Slurm submission guide](../../README.md#running-and-submission)
 
 ### German LAMBADA with Llama 3 and GPT-5.6 Luna
 
@@ -59,8 +59,8 @@ test examples.
 
 ```bash
 mkdir -p tasks/lambada/logs/{llama3-8b,gpt5.6-luna}/German
-sbatch tasks/lambada/scripts/llama3-8b/German.slurm
-sbatch tasks/lambada/scripts/gpt5.6-luna/German.slurm
+sbatch --partition=YOUR_GPU_PARTITION --gres=gpu:1 tasks/lambada/scripts/llama3-8b/German.slurm
+sbatch --partition=YOUR_CPU_PARTITION tasks/lambada/scripts/gpt5.6-luna/German.slurm
 ```
 
 The jobs use the same model and generation settings as the corresponding
@@ -99,7 +99,7 @@ The local score summary is `results.md`. The answer workbook is
 
 ## Outputs
 
-Each run writes the following files to `--output_dir`. The LRZ scripts put this directory under `tasks/lambada/results/`.
+Each run writes the following files to `--output_dir`. The Slurm scripts put this directory under `tasks/lambada/results/`.
 
 | File | Contents |
 | --- | --- |

@@ -92,6 +92,8 @@ class LauncherTest(unittest.TestCase):
                     subprocess.run(["bash", "-n", str(direct)], check=True)
                     self.assertTrue(text.startswith("#!/bin/bash\n\n#SBATCH --job-name="))
                     self.assertTrue(directives["job-name"].startswith("gpt2-ablation-"))
+                    for option in ("partition", "qos", "constraint", "account"):
+                        self.assertNotIn(option, directives)
                     self.assertIn("set -e\n\nsource .env\nsource .venv/bin/activate", text)
                     self.assertEqual("OMP_NUM_THREADS=" in text, is_train or is_prepare)
                     self.assertEqual("RAYON_NUM_THREADS=" in text, not is_train)
@@ -115,8 +117,6 @@ class LauncherTest(unittest.TestCase):
                     logs = f"models/gpt2/ablation/logs/{relative.parent.as_posix()}/prepare/%j"
                     self.assertEqual(directives["output"], logs + ".out")
                     self.assertEqual(directives["error"], logs + ".err")
-                    self.assertEqual(directives["partition"], "lrz-cpu")
-                    self.assertEqual(directives["qos"], "cpu")
                     self.assertEqual(directives["cpus-per-task"], "8")
                     self.assertEqual(directives["mem"], "64G")
                     self.assertEqual(directives["time"], "12:00:00")

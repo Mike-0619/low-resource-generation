@@ -4,8 +4,6 @@
 #SBATCH --output=models/gpt2/ablation/logs/English/10M/shared_spans/train/%A_%a.out
 #SBATCH --error=models/gpt2/ablation/logs/English/10M/shared_spans/train/%A_%a.err
 
-#SBATCH --partition=lrz-hgx-h100-94x4,lrz-hgx-a100-80x4,lrz-dgx-a100-80x8
-#SBATCH --qos=gpu
 #SBATCH --gres=gpu:1
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=16G

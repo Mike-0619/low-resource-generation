@@ -4,7 +4,7 @@ Fine-tune a model for persona-grounded dialogue and evaluate response ranking.
 The default uses Llama 3.2 3B and PersonaChat. Complete the
 [project setup](../../README.md#setup) and sign in to Hugging Face if needed.
 
-## Run on LRZ
+## Run with Slurm
 
 From the repository root, create the job log directories before submitting.
 
@@ -26,11 +26,10 @@ The pipeline also summarizes `results/eval/dpo/dpo_eval_results.json` as
 `results/aggregate/pipeline/dpo/` under `tasks/personachat/`.
 
 ```bash
-sbatch tasks/personachat/scripts/pipeline.slurm
+sbatch --partition=YOUR_GPU_PARTITION --gres=gpu:1 tasks/personachat/scripts/pipeline.slurm
 ```
 
-SFT, DPO and the pipeline request H100. Standalone evaluation accepts H100
-or A100.
+SFT, DPO, evaluation and pipeline jobs request one GPU.
 
 Standalone jobs accept `--config FILE`. Relative paths resolve from
 `tasks/personachat/`. To evaluate SFT or a saved checkpoint, copy
@@ -38,7 +37,7 @@ Standalone jobs accept `--config FILE`. Relative paths resolve from
 `output_dir`.
 
 ```bash
-sbatch tasks/personachat/scripts/evaluation/eval.slurm --config configs/my_eval.yaml
+sbatch --partition=YOUR_GPU_PARTITION --gres=gpu:1 tasks/personachat/scripts/evaluation/eval.slurm --config configs/my_eval.yaml
 ```
 
 ## Run one stage directly

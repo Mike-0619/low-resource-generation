@@ -4,8 +4,6 @@
 #SBATCH --output=models/gpt2/baseline/logs/English/10M/prepare/%j.out
 #SBATCH --error=models/gpt2/baseline/logs/English/10M/prepare/%j.err
 
-#SBATCH --partition=lrz-cpu
-#SBATCH --qos=cpu
 #SBATCH --cpus-per-task=4
 #SBATCH --mem=8G
 #SBATCH --time=00:20:00

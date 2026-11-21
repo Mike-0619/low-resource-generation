@@ -32,13 +32,13 @@ source .venv/bin/activate
 In a new Bash shell, reload `.env` with `source .env` and activate `.venv`.
 Merge future template changes into an existing `.env`; do not replace its credentials.
 
-The Bash example loads the workspace `.agents/config/cache/env.sh` with project name
-`low-resource-generation`. Caches stay under the physical workspace `.cache/`;
-changing `WORKSPACE_ROOT` does not relocate that boundary. The default datasets
-cache is `$WORKSPACE_ROOT/.cache/projects/low-resource-generation/datasets/`.
-Nonempty overrides such as `HF_HOME`, `HF_DATASETS_CACHE`, `XDG_CACHE_HOME` and
-`UV_CACHE_DIR` must stay inside that boundary; empty values use defaults.
-Python bytecode is disabled by default. Git ignores the local `.env`.
+The example is a standalone Bash configuration. `XDG_CACHE_HOME` defaults to
+`$HOME/.cache`; Hugging Face uses its `huggingface/` subdirectory and uv uses
+`uv/`. Set `HF_HOME`, `HF_DATASETS_CACHE` or `UV_CACHE_DIR` to override them.
+Nonempty exported values take precedence; empty values use defaults.
+Existing local `.env` settings are preserved, including any shared cache setup.
+Python bytecode is disabled by default. Git ignores `.env` and optional machine
+notes in `README.local.md`.
 
 ## GPT-2 data
 
@@ -50,16 +50,32 @@ uv run --active --no-sync python -B -m src.corpora.prepare_babylm --dataset engl
 ```
 
 English 10M lands in `$CORPUS_ROOT/babylm-2026/English/10M/`. The example
-defaults `CORPUS_ROOT` to `$WORKSPACE_ROOT/Corpora/`. Override it with the directory
+defaults `CORPUS_ROOT` to `$HOME/Corpora/`. Override it with the directory
 containing `babylm-2026/` when raw inputs are stored elsewhere; raw corpora are
-independent of the cache boundary.
+stored separately from caches.
 [Corpus options and access requirements](models/gpt2/baseline/README.md#prepare-raw-corpora)
 
 ## Running and submission
 
 For English 10M, stay in `models/gpt2/baseline/`. Follow [Clean and tokenize](models/gpt2/baseline/README.md#clean-and-tokenize), then [Train a model](models/gpt2/baseline/README.md#train-a-model). All three commands use `configs/English/10M.yaml`.
 
-Create the job log directory and submit from the repository root. Slurm scripts target LRZ and load the root `.env` and `.venv`. [Baseline Slurm guide](models/gpt2/baseline/README.md#run-on-lrz) · [Ablation Slurm guide](models/gpt2/ablation/README.md#run-on-lrz)
+Create the matching log directory and submit from the repository root.
+Slurm scripts load the root `.env` and `.venv`. They specify CPU, memory, time
+and GPU count; supply your site's partition and optional QoS on the command line.
+Replace `YOUR_CPU_PARTITION` and `YOUR_GPU_PARTITION` in the examples below.
+
+```bash
+sbatch --partition=YOUR_CPU_PARTITION models/gpt2/baseline/scripts/English/10M/prepare.slurm
+sbatch --partition=YOUR_GPU_PARTITION --gres=gpu:1 models/gpt2/baseline/scripts/English/10M/train.slurm
+```
+
+Add `--qos=YOUR_QOS` when required. If the site requires a GPU type, override
+`--gres`, for example `--gres=gpu:TYPE:1`. Command-line options override the
+script's defaults; shell variables are not expanded inside `#SBATCH` directives.
+See the [Slurm documentation](https://slurm.schedmd.com/sbatch.html).
+Keep machine-specific commands in the ignored `README.local.md`.
+[Baseline Slurm guide](models/gpt2/baseline/README.md#run-with-slurm) ·
+[Ablation Slurm guide](models/gpt2/ablation/README.md#run-with-slurm)
 
 ## API configuration
 

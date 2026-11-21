@@ -16,7 +16,7 @@ Compare vocabulary sizes 512, 1,024, 2,048, 4,096, 8,192, and 16,384 across seed
 Raw inputs are relative to `$CORPUS_ROOT/babylm-2026/`. For cleaning, append
 `_spans` or `_balanced` to the condition prefix.
 
-| Experiment | Raw corpus | Condition prefix | Configurations | LRZ preparation |
+| Experiment | Raw corpus | Condition prefix | Configurations | Preparation |
 | --- | --- | --- | --- | --- |
 | English 10M | `English/10M/` | `10m_en` | [shared_spans](configs/English/10M/shared_spans.yaml), [balanced_batch](configs/English/10M/balanced_batch.yaml) | [prepare.slurm](scripts/English/10M/prepare.slurm) |
 | English 100M | `English/100M/` | `100m_en` | [shared_spans](configs/English/100M/shared_spans.yaml), [balanced_batch](configs/English/100M/balanced_batch.yaml) | [prepare.slurm](scripts/English/100M/prepare.slurm) |
@@ -55,7 +55,7 @@ uv run --active --no-sync python -B -u -m src.training.train \
   --config configs/English/10M/shared_spans.yaml --vocab-size 512 --seed 42
 ```
 
-## Run on LRZ
+## Run with Slurm
 
 Submit from the repository root. The preparation job builds the shared
 weights, cleans both protocols, builds the tokenizer, then caches
@@ -63,7 +63,7 @@ weights, cleans both protocols, builds the tokenizer, then caches
 
 ```bash
 mkdir -p models/gpt2/ablation/logs/English/10M/prepare
-sbatch models/gpt2/ablation/scripts/English/10M/prepare.slurm
+sbatch --partition=YOUR_CPU_PARTITION models/gpt2/ablation/scripts/English/10M/prepare.slurm
 ```
 
 After preparation succeeds, submit the matching training script with one seed.
@@ -71,7 +71,7 @@ Each array trains that seed's six vocabulary sizes. [Slurm submission guide](../
 
 ```bash
 mkdir -p models/gpt2/ablation/logs/English/10M/shared_spans/train
-sbatch models/gpt2/ablation/scripts/English/10M/shared_spans/train.slurm 42
+sbatch --partition=YOUR_GPU_PARTITION --gres=gpu:1 models/gpt2/ablation/scripts/English/10M/shared_spans/train.slurm 42
 ```
 
 Training logs go to `logs/<language>/<size>/<protocol>/train/` under Ablation

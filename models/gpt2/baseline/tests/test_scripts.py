@@ -36,11 +36,9 @@ class ScriptTests(unittest.TestCase):
         self.temp = Path(self.temporary.name)
         self.workspace = self.temp / 'workspace with spaces'
         self.root = self.workspace / 'Projects/project with spaces'
-        self.cache = self.workspace / '.cache'
-        self.default_datasets = self.cache / 'projects/low-resource-generation/datasets'
-        cache_helper = self.workspace / '.agents/config/cache/env.sh'
-        cache_helper.parent.mkdir(parents=True)
-        shutil.copyfile(ROOT.parents[1] / '.agents/config/cache/env.sh', cache_helper)
+        self.home = self.temp / 'home with spaces'
+        self.cache = self.home / '.cache'
+        self.default_datasets = self.cache / 'huggingface/datasets'
         for directory in ['.venv/bin', 'fixture-bin', 'models/gpt2/baseline']:
             (self.root / directory).mkdir(parents=True, exist_ok=True)
         for relative in EXPECTED:
@@ -49,7 +47,6 @@ class ScriptTests(unittest.TestCase):
             shutil.copyfile(ROOT / relative, target)
         self.dotenv = self.root / '.env'
         self.dotenv.write_text((ROOT / '.env.example').read_text().replace(
-            str(ROOT.parents[1]), str(self.workspace)).replace(
             '${OPENAI_API_KEY:-}', '${OPENAI_API_KEY:-DOTENV_FIXTURE_MARKER}'))
         self.activate = self.root / '.venv/bin/activate'
         self.activate.write_text('export VIRTUAL_ENV="$PWD/.venv"\n')
@@ -58,7 +55,6 @@ class ScriptTests(unittest.TestCase):
 print(json.dumps({'args':sys.argv[1:], 'cwd':os.getcwd(),
  'venv':os.environ.get('VIRTUAL_ENV'), 'corpus':os.environ.get('CORPUS_ROOT'),
  'cache':os.environ.get('HF_HOME'), 'datasets':os.environ.get('HF_DATASETS_CACHE'),
- 'workspace':os.environ.get('WORKSPACE_ROOT'), 'project_cache':os.environ.get('MPLCONFIGDIR'),
  'api_url':os.environ.get('OPENAI_BASE_URL'),
  'xdg_cache':os.environ.get('XDG_CACHE_HOME'), 'uv_cache':os.environ.get('UV_CACHE_DIR'),
  'bytecode':os.environ.get('PYTHONDONTWRITEBYTECODE'),
@@ -68,7 +64,7 @@ print(json.dumps({'args':sys.argv[1:], 'cwd':os.getcwd(),
 sys.exit(int(os.environ.get('FIXTURE_EXIT','0')))
 ''')
         self.uv.chmod(0o700)
-        self.env = {'HOME':str(self.root), 'PATH':str(self.uv.parent)+':'+os.defpath}
+        self.env = {'HOME':str(self.home), 'PATH':str(self.uv.parent)+':'+os.defpath}
 
     def execute(self, relative, extra=None, spooled=False, code=0, cwd=None):
         script = self.root / relative
@@ -83,23 +79,38 @@ sys.exit(int(os.environ.get('FIXTURE_EXIT','0')))
             self.assertNotIn(secret, result.stdout + result.stderr)
         return [json.loads(line) for line in result.stdout.splitlines() if line.startswith('{')]
 
-    def test_slurm_partition_and_qos_match_task(self):
+    def test_slurm_resources_are_portable(self):
         script_root = ROOT / "models/gpt2/baseline/scripts"
         self.assertEqual({path.relative_to(ROOT).as_posix() for path in script_root.rglob("*.slurm")},
                          set(EXPECTED))
         for relative in EXPECTED:
             gpu = Path(relative).name == "train.slurm"
             lines = (ROOT / relative).read_text().splitlines()
-            partition = 'lrz-hgx-h100-94x4,lrz-hgx-a100-80x4,lrz-dgx-a100-80x8' if gpu else 'lrz-cpu'
-            self.assertEqual([line for line in lines if line.startswith('#SBATCH --partition=')],
-                             ['#SBATCH --partition=' + partition])
-            self.assertEqual([line for line in lines if line.startswith('#SBATCH --qos=')],
-                             ['#SBATCH --qos=' + ('gpu' if gpu else 'cpu')])
-            self.assertEqual(any(line.startswith('#SBATCH --gres=') for line in lines), gpu)
+            for option in ('partition', 'qos', 'constraint', 'account'):
+                self.assertFalse(any(line.startswith(f'#SBATCH --{option}=') for line in lines))
+            self.assertEqual([line for line in lines if line.startswith('#SBATCH --gres=')],
+                             ['#SBATCH --gres=gpu:1'] if gpu else [])
             language, size, filename = Path(relative).parts[-3:]
             log = f"models/gpt2/baseline/logs/{language}/{size}/{Path(filename).stem}/%j"
             self.assertIn(f"#SBATCH --output={log}.out", lines)
             self.assertIn(f"#SBATCH --error={log}.err", lines)
+
+    def test_public_templates_have_no_machine_configuration(self):
+        for relative in ('.env.example', 'README.md', 'tasks/paraphrase/README.md'):
+            text = (ROOT / relative).read_text()
+            for prefix in ('/dss/', '/storage/nobackup/', '/storage/home/'):
+                self.assertNotIn(prefix, text)
+        scripts = [*ROOT.glob('models/gpt2/*/scripts/**/*.slurm'),
+                   *ROOT.glob('tasks/*/scripts/**/*.slurm')]
+        for script in scripts:
+            with self.subTest(script=str(script.relative_to(ROOT))):
+                for line in script.read_text().splitlines():
+                    if line.startswith('#SBATCH'):
+                        self.assertNotIn('$', line)
+                        for option in ('partition', 'qos', 'constraint', 'account'):
+                            self.assertFalse(line.startswith(f'#SBATCH --{option}='))
+                    self.assertNotIn('lrz-', line)
+                    self.assertNotIn('gpu:nvidia:', line)
 
     def test_training_host_memory_matches_corpus_size(self):
         for language, sizes in PREPARATION_SIZES.items():
@@ -135,19 +146,19 @@ sys.exit(int(os.environ.get('FIXTURE_EXIT','0')))
     def test_environment_defaults_and_exported_overrides(self):
         job = next(iter(EXPECTED))
         record = self.execute(job)[0]
-        self.assertEqual(record['workspace'], str(self.workspace))
-        self.assertEqual(record['corpus'], str(self.workspace / 'Corpora'))
+        self.assertEqual(record['corpus'], str(self.home / 'Corpora'))
         self.assertEqual(record['xdg_cache'], str(self.cache))
         self.assertEqual(record['uv_cache'], str(self.cache / 'uv'))
         self.assertEqual(record['cache'], str(self.cache / 'huggingface'))
         self.assertEqual(record['datasets'], str(self.default_datasets))
-        self.assertEqual(record['project_cache'], str(self.cache / 'projects/low-resource-generation/matplotlib'))
         self.assertEqual(record['bytecode'], '1')
         self.assertEqual(record['api_url'], 'https://openrouter.ai/api/v1')
         shared_cache = str(self.cache / 'alternate cache')
         record = self.execute(job, extra={'XDG_CACHE_HOME': shared_cache})[0]
         self.assertEqual(record['xdg_cache'], shared_cache)
-        self.assertEqual(record['uv_cache'], str(self.cache / 'uv'))
+        self.assertEqual(record['uv_cache'], str(Path(shared_cache) / 'uv'))
+        self.assertEqual(record['cache'], str(Path(shared_cache) / 'huggingface'))
+        self.assertEqual(record['datasets'], str(Path(shared_cache) / 'huggingface/datasets'))
         overrides = {
             'XDG_CACHE_HOME': shared_cache,
             'HF_HOME': str(self.cache / 'custom/hf'),
@@ -168,7 +179,7 @@ sys.exit(int(os.environ.get('FIXTURE_EXIT','0')))
         self.assertTrue(record['api_override'])
         self.assertEqual(record['api_url'], overrides['OPENAI_BASE_URL'])
         record = self.execute(job, extra={key: '' for key in overrides})[0]
-        self.assertEqual(record['corpus'], str(self.workspace / 'Corpora'))
+        self.assertEqual(record['corpus'], str(self.home / 'Corpora'))
         self.assertEqual(record['xdg_cache'], str(self.cache))
         self.assertEqual(record['uv_cache'], str(self.cache / 'uv'))
         self.assertEqual(record['cache'], str(self.cache / 'huggingface'))
@@ -177,11 +188,14 @@ sys.exit(int(os.environ.get('FIXTURE_EXIT','0')))
         self.assertEqual(record['api_url'], 'https://openrouter.ai/api/v1')
         self.assertTrue(record['api'])
 
-    def test_outside_cache_overrides_stop_before_launch(self):
-        for variable in ('XDG_CACHE_HOME', 'UV_CACHE_DIR', 'HF_HOME', 'HF_DATASETS_CACHE'):
+    def test_cache_overrides_do_not_require_a_workspace(self):
+        fields = {'XDG_CACHE_HOME': 'xdg_cache', 'UV_CACHE_DIR': 'uv_cache',
+                  'HF_HOME': 'cache', 'HF_DATASETS_CACHE': 'datasets'}
+        for variable, field in fields.items():
             with self.subTest(variable=variable):
-                self.assertEqual(self.execute(next(iter(EXPECTED)),
-                    extra={variable: str(self.temp / 'outside-cache')}, code=1), [])
+                custom = str(self.temp / 'custom cache')
+                record = self.execute(next(iter(EXPECTED)), extra={variable: custom})[0]
+                self.assertEqual(record[field], custom)
 
     def test_missing_setup_stops_before_execution(self):
         job = next(iter(EXPECTED))

@@ -4,8 +4,6 @@
 #SBATCH --output=tasks/paraphrase/logs/comparison/%x-%j.out
 #SBATCH --error=tasks/paraphrase/logs/comparison/%x-%j.err
 
-#SBATCH --partition=lrz-cpu
-#SBATCH --qos=cpu
 #SBATCH --cpus-per-task=4
 #SBATCH --mem=4G
 #SBATCH --time=00:10:00

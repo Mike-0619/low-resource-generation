@@ -4,8 +4,6 @@
 #SBATCH --output=tasks/paraphrase/logs/comparison/%x-%j.out
 #SBATCH --error=tasks/paraphrase/logs/comparison/%x-%j.err
 
-#SBATCH --partition=lrz-hgx-h100-94x4
-#SBATCH --qos=gpu
 #SBATCH --gres=gpu:1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=18

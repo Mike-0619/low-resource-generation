@@ -4,8 +4,6 @@
 #SBATCH --output=models/gpt2/ablation/logs/English/100M/balanced_batch/data/%j.out
 #SBATCH --error=models/gpt2/ablation/logs/English/100M/balanced_batch/data/%j.err
 
-#SBATCH --partition=lrz-cpu
-#SBATCH --qos=cpu
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=64G
 #SBATCH --time=06:00:00

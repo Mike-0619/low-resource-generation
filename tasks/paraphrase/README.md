@@ -8,7 +8,7 @@ generated paraphrases with SacreBLEU, ParaPLUIE and an optional local Qwen judge
 Complete the [project setup](../../README.md#setup) and export the English
 GPT-2 models for the selected sizes. [Baseline training](../../models/gpt2/baseline/README.md#train-a-model)
 
-## Running on LRZ
+## Run with Slurm
 
 Run `sbatch` or `bash` from the repository root. Create the job log directories first.
 
@@ -25,34 +25,34 @@ mkdir -p tasks/paraphrase/logs/{gpt2,llama3,comparison,pipeline}
 | Score the aggregate with Qwen (GPU) | [comparison/judge.slurm](scripts/comparison/judge.slurm) | [comparison/judge_with_100m.yaml](configs/comparison/judge_with_100m.yaml), [comparison/judge_without_100m.yaml](configs/comparison/judge_without_100m.yaml) |
 | Run the full experiment | [pipeline.slurm](scripts/pipeline.slurm) | Selects the configs above for each stage |
 
-GPT-2 and Llama jobs support H100 or A100. The judge and full pipeline request H100.
+GPT-2, Llama, judge and full pipeline jobs request one GPU.
 
 Submit 10M and Llama for either comparison. Include 100M for the full comparison.
 
 ```bash
-sbatch tasks/paraphrase/scripts/gpt2/gpt2_10m.slurm
-sbatch tasks/paraphrase/scripts/llama3/llama3.slurm
-sbatch tasks/paraphrase/scripts/gpt2/gpt2_100m.slurm  # full comparison only
+sbatch --partition=YOUR_GPU_PARTITION --gres=gpu:1 tasks/paraphrase/scripts/gpt2/gpt2_10m.slurm
+sbatch --partition=YOUR_GPU_PARTITION --gres=gpu:1 tasks/paraphrase/scripts/llama3/llama3.slurm
+sbatch --partition=YOUR_GPU_PARTITION --gres=gpu:1 tasks/paraphrase/scripts/gpt2/gpt2_100m.slurm  # full comparison only
 ```
 
 After the model jobs succeed, submit the aggregate. Run the optional judge after aggregation succeeds.
 
 ```bash
-sbatch tasks/paraphrase/scripts/comparison/aggregate.slurm
-sbatch tasks/paraphrase/scripts/comparison/judge.slurm
+sbatch --partition=YOUR_CPU_PARTITION tasks/paraphrase/scripts/comparison/aggregate.slurm
+sbatch --partition=YOUR_GPU_PARTITION --gres=gpu:1 tasks/paraphrase/scripts/comparison/judge.slurm
 ```
 
 Both scripts include 100M by default. To omit it, use these configs in the same order.
 
 ```bash
-sbatch tasks/paraphrase/scripts/comparison/aggregate.slurm --config configs/comparison/aggregate_without_100m.yaml
-sbatch tasks/paraphrase/scripts/comparison/judge.slurm --config configs/comparison/judge_without_100m.yaml
+sbatch --partition=YOUR_CPU_PARTITION tasks/paraphrase/scripts/comparison/aggregate.slurm --config configs/comparison/aggregate_without_100m.yaml
+sbatch --partition=YOUR_GPU_PARTITION --gres=gpu:1 tasks/paraphrase/scripts/comparison/judge.slurm --config configs/comparison/judge_without_100m.yaml
 ```
 
 To run the complete experiment in one job, prepare the local judge first.
 
 ```bash
-sbatch tasks/paraphrase/scripts/pipeline.slurm
+sbatch --partition=YOUR_GPU_PARTITION --gres=gpu:1 tasks/paraphrase/scripts/pipeline.slurm
 ```
 
 Use `--without-100m` to omit 100M, `--train_only` to stop after aggregation,
@@ -106,9 +106,6 @@ that sample IDs, source texts and references match across systems.
 Set `CUDA_ROOT` to your CUDA 13.2 toolkit directory, with `bin/nvcc`, CUDA
 headers, and cuBLAS available. Build the optional judge dependency from the
 repository root with the project environment active.
-
-On LRZ, set `CUDA_ROOT` to the existing toolkit at
-`/dss/dssfs05/lwp-dss-0003/pn39je/pn39je-dss-0004/go46wuw2_2/.cache/runtime/cuda/toolkit-13.2.1`.
 
 ```bash
 export PATH="$CUDA_ROOT/bin:$PATH"
