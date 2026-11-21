@@ -1,8 +1,8 @@
 #!/bin/bash
 
 #SBATCH --job-name=greedy_gpt2_German_10M_full
-#SBATCH --output=tasks/lambada/logs/gpt2/German/10M/seed_42/full/%j.out
-#SBATCH --error=tasks/lambada/logs/gpt2/German/10M/seed_42/full/%j.err
+#SBATCH --output=tasks/lambada/logs/gpt2/German/10M/%j.out
+#SBATCH --error=tasks/lambada/logs/gpt2/German/10M/%j.err
 
 #SBATCH --partition=lrz-hgx-h100-94x4,lrz-hgx-a100-80x4,lrz-dgx-a100-80x8
 #SBATCH --qos=gpu
@@ -13,11 +13,16 @@
 
 set -e
 
+if (( $# )); then
+  printf 'Usage: %s\n' "$0" >&2
+  exit 2
+fi
+
 source .env
 source .venv/bin/activate
 
 uv run --active --no-sync python -u -m tasks.lambada.src.greedy \
   --backend local --language de \
   --model "models/gpt2/baseline/results/German/10M/seed_42/final" \
-  --context_limit 512 --dtype float32 --bos always --all --batch_size 8 --device cuda \
-  --output_dir "tasks/lambada/results/gpt2/German/10M/seed_42/full"
+  --context_limit 512 --dtype float32 --bos always --batch_size 8 --device cuda \
+  --output_dir "tasks/lambada/results/gpt2/German/10M"

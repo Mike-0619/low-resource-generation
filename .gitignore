@@ -1,14 +1,6 @@
-# Local environment and Python cache
+# Local environment
 .venv/
 .env
+
+# Python bytecode
 __pycache__/
-.cache/
-
-# Local corpora
-/corpora/
-
-# Generated outputs
-/logs/
-/results/
-/outputs/
-/reports/

@@ -1,5 +1,4 @@
 """CLI, fixed datasets, evaluation preflight and protected result exports."""
-import csv
 import io
 import json
 import os
@@ -11,18 +10,15 @@ import unittest
 from contextlib import contextmanager, redirect_stdout, redirect_stderr
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from types import SimpleNamespace
 from unittest.mock import call, patch
 
 import torch
 from tasks.lambada import src as lambada
 from tasks.lambada.src import greedy as word, data as dataset, local, api as backend_api, scoring
-MODELS = ("openai/gpt-5.6-luna", "openai/gpt-5.6-sol")
 from tasks.lambada.src.data import DATASET_SPECS
 from tasks.lambada.src.data import _load_lambada_dataset
 from tasks.lambada.src.data import load_lambada_examples
 from tasks.lambada.src.greedy import evaluate
-from tasks.lambada.src.greedy import prepare_output_dir
 from tasks.lambada.src.scoring import summarize_greedy
 from tasks.lambada.src.greedy import write_greedy_results
 from test_local import ByteTokenizer, FakeModel, local_runtime
@@ -34,28 +30,6 @@ def data(count=2):
         "dataset": "fixture", "dataset_revision": "fixed", "dataset_examples": count,
         "eligible_examples": count, "skipped_examples": [],
     })
-
-
-@contextmanager
-def sample_io_failure(operation, *, error):
-    """Fail journal writes or flushes while still closing the real file."""
-    original_open = Path.open
-
-    def fail(*args):
-        raise error
-
-    @contextmanager
-    def failing_open(path, *args, **kwargs):
-        with original_open(path, *args, **kwargs) as stream:
-            if path.name == 'samples.jsonl':
-                methods = {'write': stream.write, 'flush': stream.flush, operation: fail}
-                yield SimpleNamespace(**methods)
-            else:
-                yield stream
-
-    with patch.object(Path, 'open', failing_open):
-        yield
-
 
 
 @contextmanager
@@ -94,25 +68,49 @@ class EvaluationTests(unittest.TestCase):
             api_generate.assert_not_called()
 
 
-    def test_invalid_cli_options_preserve_existing_outputs_even_with_overwrite(self):
+    def test_turkish_placeholder_fails_before_evaluation(self):
+        message = 'Turkish LAMBADA data is pending'
+        for backend in ('local', 'api'):
+            stderr = io.StringIO()
+            with (self.subTest(backend=backend), TemporaryDirectory() as directory,
+                  redirect_stderr(stderr), patch.object(local, 'resolve_device') as resolve_device,
+                  patch.object(word, '_evaluate') as run):
+                output = Path(directory) / 'results'
+                with self.assertRaises(SystemExit) as error:
+                    word.main(['--backend', backend, '--model', 'fixture/model', '--language',
+                               'tr', '--output_dir', str(output)])
+                self.assertEqual(error.exception.code, 2)
+                self.assertIn(message, stderr.getvalue())
+                with self.assertRaisesRegex(ValueError, message):
+                    word.evaluate('fixture/model', 'tr', backend=backend)
+                resolve_device.assert_not_called()
+                run.assert_not_called()
+                self.assertFalse(output.exists())
+
+    def test_turkish_placeholder_fails_before_loading_dataset(self):
+        with (patch.object(dataset, '_load_lambada_dataset') as load,
+              self.assertRaisesRegex(ValueError, 'Turkish LAMBADA data is pending')):
+            dataset.load_lambada_examples('tr')
+        load.assert_not_called()
+
+    def test_invalid_cli_options_preserve_existing_outputs(self):
         cases = [
             ['--backend', 'local', '--model', '/model', '--batch_size', '0'],
-            ['--backend', 'local', '--model', '/model', '--device', 'cpu', '--all'],
+            ['--backend', 'local', '--model', '/model', '--device', 'cpu'],
             ['--backend', 'local', '--model', '/model', '--concurrency', '4'],
             ['--backend', 'api', '--model', 'fixture/model', '--dtype', 'auto'],
             ['--backend', 'api','--model','fixture/model', '--concurrency', '0'],
         ]
         with tempfile.TemporaryDirectory() as directory:
             output = Path(directory)
-            previous = {'metrics.json': 'previous metrics', 'samples.json': 'previous samples',
-                        'samples.jsonl': 'previous journal'}
+            previous = {'metrics.json': 'previous metrics', 'samples.json': 'previous samples'}
             for name, text in previous.items():
                 (output / name).write_text(text)
             for options in cases:
                 with (self.subTest(options=options), redirect_stderr(io.StringIO()),
                       patch.object(word, '_evaluate') as run,
                       self.assertRaises(SystemExit)):
-                    word.main(['--language', 'en', '--output_dir', directory, '--overwrite', *options])
+                    word.main(['--language', 'en', '--output_dir', directory, *options])
                 run.assert_not_called()
                 self.assertEqual({p.name: p.read_text() for p in output.iterdir()}, previous)
 
@@ -121,13 +119,12 @@ class EvaluationTests(unittest.TestCase):
         command = [*base, '--backend', 'local']
         args = word.parse_args(command)
         self.assertEqual((args.backend, args.limit, args.device, args.batch_size, args.bos, args.dtype),
-                         ('local', 20, 'cuda', 8, 'auto', 'auto'))
-        self.assertIsNone(word.parse_args([*command, '--all']).limit)
+                         ('local', None, 'cuda', 8, 'auto', 'auto'))
         args = word.parse_args([*command, '--device', 'cpu', '--batch_size', '1', '--limit', '3'])
         self.assertEqual((args.limit, args.batch_size, args.device), (3, 1, 'cpu'))
         args = word.parse_args([*base, '--backend', 'api'])
         self.assertEqual((args.model, args.concurrency, args.reasoning_effort), ('/model', 4, None))
-        invalid = [base, [*command, '--limit', '3', '--all'], [*command, '--device', 'cpu', '--all'],
+        invalid = [base, [*command, '--all'], [*command, '--overwrite'], [*command, '--device', 'cpu'],
                    [*command, '--batch_size', '0'], [*command, '--concurrency', '4'],
                    [*command, '--reasoning_effort', 'none'], [*command, '--context_limit', '0'],
                    [*command, '--model_path', '/legacy'], [*command, '--gpt_model', 'legacy'],
@@ -149,8 +146,8 @@ class EvaluationTests(unittest.TestCase):
                 args = ['--backend', backend, '--model', '/model', '--language', 'en']
                 kwargs = {'backend': backend}
                 if backend == 'local':
-                    args += ['--device', 'cpu']
-                    kwargs['device'] = 'cpu'
+                    args += ['--device', 'cpu', '--limit', '1']
+                    kwargs.update(device='cpu', limit=1)
                 with (self.subTest(backend=backend, cli=cli),
                       tempfile.TemporaryDirectory() as directory,
                       patch.object(dataset, 'load_lambada_examples', return_value=data(1)),
@@ -170,7 +167,7 @@ class EvaluationTests(unittest.TestCase):
         with (patch.object(local.LocalModel, 'load', side_effect=ValueError('incompatible model')),
               patch.object(dataset, 'load_lambada_examples') as load,
               self.assertRaisesRegex(ValueError, 'incompatible model')):
-            word.evaluate('/model', 'en', device='cpu')
+            word.evaluate('/model', 'en', device='cpu', limit=20)
         load.assert_not_called()
 
     def test_no_cuda_fails_before_loading_or_output_changes(self):
@@ -188,35 +185,36 @@ class EvaluationTests(unittest.TestCase):
         for invalid in ('x'*511 + ' target', ' target'):
             with local_evaluation(tok, model, ['valid target', invalid]):
                 with self.assertRaisesRegex(ValueError, "dataset index 1"):
-                    word.evaluate('/model','en',device='cpu')
+                    word.evaluate('/model','en',device='cpu', limit=20)
                 self.assertEqual(model.calls, [])
 
     def test_programmatic_defaults_metadata_and_cpu_full_rejection(self):
         tok = ByteTokenizer()
-        examples = ['context target']*25
-        model = FakeModel([tok.encode('target ')]*25)
+        examples = ['context target'] * 25
+        model = FakeModel([tok.encode('target ')] * 25)
         with local_evaluation(tok, model, examples):
-            metrics, rows = word.evaluate('/model','en',device='cpu')
-        self.assertEqual(len(rows),20)
-        self.assertEqual(metrics['sample_selection'], {'mode':'limit','limit':20})
-        self.assertEqual((metrics['batch_size'],metrics['device']), (8,'cpu'))
+            metrics, rows = word.evaluate('/model', 'en')
+        self.assertEqual(len(rows), 25)
+        self.assertEqual(metrics['sample_selection'], {'mode': 'all', 'limit': None})
         with self.assertRaisesRegex(ValueError, 'full evaluation requires CUDA'):
-            word.evaluate('/model','en',limit=None,device='cpu')
+            word.evaluate('/model', 'en', device='cpu')
+        with local_evaluation(tok, FakeModel([tok.encode('target ')] * 25), examples):
+            limited, rows = word.evaluate('/model', 'en', limit=3, device='cpu')
+        self.assertEqual(len(rows), 3)
+        self.assertEqual(limited['sample_selection'], {'mode': 'limit', 'limit': 3})
 
     def test_contexts_are_encoded_once_and_prepared_inputs_stay_private(self):
         tok = ByteTokenizer()
         contexts = ['first', 'a longer context', 'last']
         examples = [context + ' target' for context in contexts]
         model = FakeModel([tok.encode('target ')] * len(examples))
-        journal = []
         with (
             local_evaluation(tok, model, examples),
             patch.object(tok, 'encode', wraps=tok.encode) as encode,
         ):
-            metrics, samples = word.evaluate('/model', 'en', device='cpu', on_record=journal.append)
+            metrics, samples = word.evaluate('/model', 'en', device='cpu', limit=20)
         self.assertEqual(encode.call_args_list, [call(context, add_special_tokens=True) for context in contexts])
         self.assertEqual(metrics['correct'], len(examples))
-        self.assertEqual(journal, samples)
         expected_fields = {
             'sample_id', 'dataset_index', 'context', 'target_word',
             'generated_ids', 'generated_text', 'generation_budget',
@@ -248,13 +246,18 @@ class EvaluationTests(unittest.TestCase):
 
     def test_run_outputs_and_partial_failure(self):
         for failure in (False, True):
-            with tempfile.TemporaryDirectory() as directory, \
-                    patch.object(dataset, 'load_lambada_examples', return_value=data()), \
-                    patch.object(local.LocalModel, 'load') as local_model, \
-                    redirect_stdout(io.StringIO()), redirect_stderr(io.StringIO()):
-                output = Path(directory)
-                (output/'metrics.json').write_text('{"status":"complete"}')
-                args = ['--backend','api','--model','fixture/model','--language','en','--concurrency','1','--output_dir',directory,'--overwrite']
+            with (self.subTest(failure=failure), tempfile.TemporaryDirectory() as directory,
+                  patch.object(dataset, 'load_lambada_examples', return_value=data()),
+                  patch.object(local.LocalModel, 'load') as local_model,
+                  redirect_stdout(io.StringIO()), redirect_stderr(io.StringIO())):
+                output = Path(directory) / 'result'
+                output.mkdir()
+                previous = {'metrics.json': '{"status":"complete"}',
+                            'samples.json': 'previous samples'}
+                for name, contents in previous.items():
+                    (output / name).write_text(contents)
+                args = ['--backend', 'api', '--model', 'fixture/model', '--language', 'en',
+                        '--concurrency', '1', '--output_dir', str(output)]
                 ending = ResponseStream([OSError('broken')]) if failure else response('Strasse')
                 with api([response('Straße'), ending]) as client:
                     if failure:
@@ -262,39 +265,48 @@ class EvaluationTests(unittest.TestCase):
                             word.main(args)
                     else:
                         word.main(args)
+                    self.assertTrue(client.closed)
                 local_model.assert_not_called()
-                rows = [json.loads(s) for s in (output/'samples.jsonl').read_text().splitlines()]
-                self.assertEqual(len(rows), 1 if failure else 2)
-                self.assertTrue(all(r['exact_match'] for r in rows))
                 if failure:
-                    self.assertFalse((output/'metrics.json').exists())
+                    self.assertEqual({p.name: p.read_text() for p in output.iterdir()}, previous)
                 else:
-                    self.assertEqual(rows, json.loads((output/'samples.json').read_text()))
-                    self.assertEqual(json.loads((output/'metrics.json').read_text())['accuracy'], 1)
-                    self.assertTrue((output/'human_eval.csv').exists())
+                    self.assertEqual({p.name for p in output.iterdir()},
+                                     {'metrics.json', 'samples.json'})
+                    rows = json.loads((output / 'samples.json').read_text())
+                    self.assertEqual(len(rows), 2)
+                    self.assertTrue(all(row['exact_match'] for row in rows))
+                    self.assertEqual(json.loads((output / 'metrics.json').read_text())['accuracy'], 1)
 
-    def test_human_annotations_block_even_overwrite_before_generation(self):
-        with tempfile.TemporaryDirectory() as directory, patch.object(word, '_evaluate') as evaluate:
-            output = Path(directory)
-            (output/'human_eval.csv').write_text('human_score,comment\n0,reviewed\n')
-            (output/'metrics.json').write_text('previous')
-            with self.assertRaisesRegex(ValueError, 'human annotations'):
-                word.main(['--backend','api','--model','fixture/model','--language','en','--output_dir',directory,'--overwrite'])
-            evaluate.assert_not_called()
-            self.assertEqual((output/'metrics.json').read_text(), 'previous')
 
-    def test_journal_io_error_closes_api_and_never_publishes_metrics(self):
-        for operation in ('write', 'flush'):
-            with tempfile.TemporaryDirectory() as directory, \
-                    patch.object(dataset, 'load_lambada_examples', return_value=data()), \
-                    api([response('Straße')]) as client, \
-                    sample_io_failure(operation, error=OSError('disk full')), \
-                    redirect_stderr(io.StringIO()):
-                with self.assertRaises(OSError):
-                    word.main(['--backend','api','--model','fixture/model','--language','en','--concurrency','1','--output_dir',directory])
+    def test_export_errors_close_api_and_preserve_previous_results(self):
+        for filename in ('samples.json', 'metrics.json'):
+            with (self.subTest(filename=filename),
+                  tempfile.TemporaryDirectory() as directory,
+                  patch.object(dataset, 'load_lambada_examples', return_value=data()),
+                  api([response('Straße'), response('Strasse')]) as client,
+                  redirect_stdout(io.StringIO()), redirect_stderr(io.StringIO())):
+                output = Path(directory) / 'result'
+                output.mkdir()
+                previous = {'metrics.json': '{"status":"complete"}',
+                            'samples.json': 'previous samples'}
+                for name, contents in previous.items():
+                    (output / name).write_text(contents)
+                original_write = Path.write_text
+
+                def write(path, *args, **kwargs):
+                    if path.name == filename and path.parent.name == '.result.staging':
+                        original_write(path, 'partial')
+                        raise OSError('disk full')
+                    return original_write(path, *args, **kwargs)
+
+                with patch.object(Path, 'write_text', write), self.assertRaises(OSError):
+                    word.main(['--backend', 'api', '--model', 'fixture/model',
+                               '--language', 'en', '--concurrency', '1',
+                               '--output_dir', str(output)])
                 self.assertTrue(client.closed)
-                self.assertFalse((Path(directory)/'metrics.json').exists())
-                self.assertEqual(client.responses.create.call_count, 1)
+                self.assertEqual({p.name: p.read_text() for p in output.iterdir()}, previous)
+                self.assertEqual(client.responses.create.call_count, 2)
+                self.assertFalse(output.with_name('.result.staging').exists())
 
     def test_reference_independence_and_all_record_exports(self):
         tokenizer = ByteTokenizer()
@@ -304,7 +316,7 @@ class EvaluationTests(unittest.TestCase):
         model = FakeModel([tokenizer.encode(text) for text in outputs])
         examples = [context + ' ' + target for target in targets]
         with local_evaluation(tokenizer, model, examples):
-            metrics, samples = evaluate('/model', 'en', batch_size=1, device='cpu')
+            metrics, samples = evaluate('/model', 'en', batch_size=1, device='cpu', limit=20)
         self.assertEqual((metrics['total'], metrics['correct'], metrics['completed'], metrics['failed']), (7, 2, 6, 1))
         self.assertEqual(metrics['accuracy'], 2 / 7)
         self.assertEqual(metrics['protocol'], 'case_sensitive_punctuation_boundary_sharp_s_v2')
@@ -325,25 +337,8 @@ class EvaluationTests(unittest.TestCase):
             stored = json.loads((output / 'samples.json').read_text())
             self.assertEqual(stored, samples)
             self.assertEqual(json.loads((output / 'metrics.json').read_text()), metrics)
-            with (output / 'human_eval.csv').open(newline='', encoding='utf-8') as handle:
-                reader = csv.DictReader(handle)
-                self.assertEqual(reader.fieldnames, ['sample_id', 'context', 'normalized_prediction', 'normalized_target_word', 'completed', 'human_score', 'comment'])
-                human = list(reader)
-            self.assertEqual(len(human), len(stored))
-            for row, item in zip(human, stored):
-                self.assertEqual(row['sample_id'], item['sample_id'])
-                for field in ('context', 'normalized_prediction', 'normalized_target_word'):
-                    self.assertEqual(row[field], item[field])
-                self.assertEqual(row['completed'], str(item['completed']))
-                self.assertEqual((row['human_score'], row['comment']), ('', ''))
-            for field, value in [('human_score', '0'), ('comment', 'Reviewed')]:
-                with (output / 'human_eval.csv').open('w', newline='', encoding='utf-8') as handle:
-                    writer = csv.DictWriter(handle, fieldnames=[field])
-                    writer.writeheader()
-                    writer.writerow({field: value})
-                with self.assertRaisesRegex(ValueError, 'human annotations'):
-                    write_greedy_results(output, {}, [])
-                self.assertEqual(json.loads((output / 'metrics.json').read_text()), metrics)
+            self.assertEqual({path.name for path in output.iterdir()},
+                             {'metrics.json', 'samples.json'})
 
     def test_online_load_uses_language_dataset_spec(self):
         expected_specs = {
@@ -474,19 +469,14 @@ class EvaluationTests(unittest.TestCase):
             },
         )
 
-    def test_output_directory_protection_and_current_exports(self):
-        payload = {"metric": "test"}
-        with TemporaryDirectory(dir=os.environ.get("XDG_CACHE_HOME")) as temporary_directory:
-            output = Path(temporary_directory) / "evaluation"
-            output.mkdir()
-            prepared = prepare_output_dir(str(output), overwrite=False)
-            write_greedy_results(prepared, payload, [])
-            self.assertTrue((output / "metrics.json").is_file())
-            self.assertTrue((output / "samples.json").is_file())
-            self.assertTrue((output / "human_eval.csv").is_file())
-            self.assertFalse((output / "metrics.json.tmp").exists())
-            with self.assertRaises(FileExistsError):
-                prepare_output_dir(str(output), overwrite=False)
+    def test_successful_export_replaces_previous_results(self):
+        with TemporaryDirectory(dir=os.environ.get("XDG_CACHE_HOME")) as directory:
+            output = Path(directory) / "evaluation"
+            write_greedy_results(output, {"metric": "old"}, [{"prediction": "old"}])
+            write_greedy_results(output, {"metric": "new"}, [{"prediction": "new"}])
+            self.assertEqual(json.loads((output / "metrics.json").read_text()), {"metric": "new"})
+            self.assertEqual(json.loads((output / "samples.json").read_text()), [{"prediction": "new"}])
+            self.assertEqual({path.name for path in output.iterdir()}, {'metrics.json', 'samples.json'})
 
 
 if __name__ == '__main__':

@@ -21,20 +21,24 @@ Use `uv` on Linux x86‑64. The lockfile targets Python 3.14 and PyTorch with CU
 Run from the repository root. If `.env` already exists, start with `source .env`.
 
 ```bash
-cp .env.example .env
+if [ ! -e .env ]; then
+  cp .env.example .env
+fi
 source .env
-export PYTHONDONTWRITEBYTECODE=1
 uv sync --locked
 source .venv/bin/activate
 ```
 
-In a new shell, reload `.env`, set `PYTHONDONTWRITEBYTECODE=1`, and activate `.venv`.
+In a new Bash shell, reload `.env` with `source .env` and activate `.venv`.
+Merge future template changes into an existing `.env`; do not replace its credentials.
 
-The example `.env` defaults to `.cache/` for Hugging Face and Baseline tokens
-and `.cache/uv/` for uv. Git ignores `.cache/`. To share caches, set
-`XDG_CACHE_HOME` to a common absolute path. Override individual caches with
-`HF_HOME`, `HF_DATASETS_CACHE` or `UV_CACHE_DIR`. On LRZ, keep the local `.env`
-that loads the workspace cache settings.
+The Bash example loads the workspace `.agents/config/cache/env.sh` with project name
+`low-resource-generation`. Caches stay under the physical workspace `.cache/`;
+changing `WORKSPACE_ROOT` does not relocate that boundary. The default datasets
+cache is `$WORKSPACE_ROOT/.cache/projects/low-resource-generation/datasets/`.
+Nonempty overrides such as `HF_HOME`, `HF_DATASETS_CACHE`, `XDG_CACHE_HOME` and
+`UV_CACHE_DIR` must stay inside that boundary; empty values use defaults.
+Python bytecode is disabled by default. Git ignores the local `.env`.
 
 ## GPT-2 data
 
@@ -45,9 +49,10 @@ cd models/gpt2/baseline
 uv run --active --no-sync python -B -m src.corpora.prepare_babylm --dataset english-10m
 ```
 
-English 10M lands in `corpora/babylm-2026/English/10M/` by default. To share
-raw corpora, set `CORPUS_ROOT` in each local `.env` to the same absolute path
-containing `babylm-2026/`. Git ignores `.env` and the default `corpora/`.
+English 10M lands in `$CORPUS_ROOT/babylm-2026/English/10M/`. The example
+defaults `CORPUS_ROOT` to `$WORKSPACE_ROOT/Corpora/`. Override it with the directory
+containing `babylm-2026/` when raw inputs are stored elsewhere; raw corpora are
+independent of the cache boundary.
 [Corpus options and access requirements](models/gpt2/baseline/README.md#prepare-raw-corpora)
 
 ## Running and submission

@@ -1,7 +1,8 @@
 """Free-greedy LAMBADA evaluation with local models or Responses APIs."""
 import argparse
-import csv
 import json
+import shutil
+import sys
 from contextlib import closing
 from pathlib import Path
 
@@ -9,11 +10,6 @@ from . import MAX_NEW_TOKENS
 from . import api, data, local, scoring
 
 from tqdm import tqdm
-
-HUMAN_FIELDS = (
-    "sample_id", "context", "normalized_prediction", "normalized_target_word",
-    "completed", "human_score", "comment",
-)
 
 
 def evaluation_options(model, language, limit, *, backend, batch_size=None, device=None,
@@ -23,8 +19,7 @@ def evaluation_options(model, language, limit, *, backend, batch_size=None, devi
         raise ValueError(f"Unsupported backend: {backend}")
     if not model or not str(model).strip():
         raise ValueError("model must be a nonempty local directory or API model name")
-    if language not in data.DATASET_SPECS:
-        raise ValueError(f"Unsupported language: {language}")
+    data.get_dataset_spec(language)
     for name, value in {"limit": limit, "batch_size": batch_size,
                         "concurrency": concurrency, "context_limit": context_limit}.items():
         if value is not None and value < 1:
@@ -53,11 +48,9 @@ def parse_args(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--backend", choices=("local", "api"), required=True)
     parser.add_argument("--model", required=True)
-    parser.add_argument("--language", choices=data.DATASET_SPECS, required=True)
+    parser.add_argument("--language", choices=data.LANGUAGES, required=True)
     parser.add_argument("--output_dir", required=True)
-    selection = parser.add_mutually_exclusive_group()
-    selection.add_argument("--limit", type=int, default=20)
-    selection.add_argument("--all", action="store_true")
+    parser.add_argument("--limit", type=int)
     parser.add_argument("--batch_size", type=int)
     parser.add_argument("--device", choices=("cuda", "cpu"))
     parser.add_argument("--context_limit", type=int)
@@ -65,11 +58,9 @@ def parse_args(argv=None):
     parser.add_argument("--bos", choices=("auto", "always", "never"))
     parser.add_argument("--concurrency", type=int)
     parser.add_argument("--reasoning_effort")
-    parser.add_argument("--overwrite", action="store_true")
     args = parser.parse_args(argv)
-    args.limit = None if args.all else args.limit
     options = {key: value for key, value in vars(args).items()
-               if key not in {"all", "output_dir", "overwrite"}}
+               if key != "output_dir"}
     try:
         vars(args).update(vars(evaluation_options(**options)))
     except ValueError as error:
@@ -77,16 +68,16 @@ def parse_args(argv=None):
     return args
 
 
-def evaluate(model, language, limit=20, *, backend="local", batch_size=None, device=None,
+def evaluate(model, language, limit=None, *, backend="local", batch_size=None, device=None,
              concurrency=None, context_limit=None, dtype=None, bos=None,
-             reasoning_effort=None, on_record=None):
+             reasoning_effort=None):
     options = evaluation_options(model, language, limit, backend=backend, batch_size=batch_size,
                                  device=device, concurrency=concurrency, context_limit=context_limit,
                                  dtype=dtype, bos=bos, reasoning_effort=reasoning_effort)
-    return _evaluate(options, on_record)
+    return _evaluate(options)
 
 
-def _evaluate(options, on_record=None):
+def _evaluate(options):
     runner = None
     if options.backend == "local":
         runner = local.LocalModel.load(options.model, device=options.device, dtype=options.dtype,
@@ -114,11 +105,10 @@ def _evaluate(options, on_record=None):
     samples = []
     with closing(generated):
         for example, result in tqdm(zip(selected, generated, strict=True), total=len(selected)):
-            record = {**example, **result,
-                      **scoring.score_word(result["prediction"], example["target_word"], result["completed"])}
-            if on_record is not None:
-                on_record(record)
-            samples.append(record)
+            samples.append({
+                **example, **result,
+                **scoring.score_word(result["prediction"], example["target_word"], result["completed"]),
+            })
     return {
         **model_metadata, "backend": options.backend, "language": options.language, "limit": options.limit,
         "sample_selection": {"mode": "all" if options.limit is None else "limit", "limit": options.limit},
@@ -129,52 +119,72 @@ def _evaluate(options, on_record=None):
     }, samples
 
 
-def prepare_output_dir(output_dir: str, overwrite: bool) -> Path:
-    output = Path(output_dir)
-    if output.exists() and not overwrite and (not output.is_dir() or any(output.iterdir())):
-        raise FileExistsError(f"Output exists: {output}; pass --overwrite explicitly")
-    output.mkdir(parents=True, exist_ok=True)
+def prepare_output_dir(output_dir, limit=None):
+    """Recover interrupted publication and protect full evaluation results."""
+    output = Path(output_dir).expanduser().resolve()
+    output.parent.mkdir(parents=True, exist_ok=True)
+    if output.exists() and not output.is_dir():
+        raise NotADirectoryError(output)
+    previous = output.with_name(f".{output.name}.previous")
+    if previous.exists():
+        if output.exists():
+            shutil.rmtree(previous)
+        else:
+            previous.rename(output)
+    shutil.rmtree(output.with_name(f".{output.name}.staging"), ignore_errors=True)
+    metrics = output / "metrics.json"
+    if limit is not None and metrics.is_file():
+        old = json.loads(metrics.read_text(encoding="utf-8"))
+        if old.get("sample_selection", {}).get("mode") == "all" or old.get("limit") is None:
+            raise ValueError("Limited evaluation cannot replace full results; use a different --output_dir")
     return output
 
 
-def check_human_annotations(output):
-    human_path = output / "human_eval.csv"
-    if human_path.exists():
-        with human_path.open(encoding="utf-8", newline="") as handle:
-            if any(row.get("human_score", "").strip() or row.get("comment", "").strip()
-                   for row in csv.DictReader(handle)):
-                raise ValueError(f"Refusing to overwrite human annotations: {human_path}")
+def _publish_results(output, payload, samples):
+    """Stage a complete result pair and roll back a failed publication."""
+    staging = output.with_name(f".{output.name}.staging")
+    previous = output.with_name(f".{output.name}.previous")
+    try:
+        if output.exists():
+            shutil.copytree(output, staging, symlinks=True)
+        else:
+            staging.mkdir()
+        for name, values in (("samples.json", samples), ("metrics.json", payload)):
+            destination = staging / name
+            destination.unlink(missing_ok=True)
+            destination.write_text(json.dumps(values, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+        if output.exists():
+            output.rename(previous)
+        try:
+            staging.rename(output)
+        except BaseException:
+            if previous.exists():
+                try:
+                    previous.rename(output)
+                except OSError as error:
+                    raise RuntimeError(f"Could not restore old results; backup is preserved at {previous}") from error
+            raise
+        if previous.exists():
+            try:
+                shutil.rmtree(previous)
+            except OSError as error:
+                print(f"Results saved; could not remove backup {previous}: {error}", file=sys.stderr)
+    finally:
+        shutil.rmtree(staging, ignore_errors=True)
 
 
 def write_greedy_results(output, payload, samples):
-    check_human_annotations(output)
-    (output / "samples.json").write_text(json.dumps(samples, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
-    with (output / "human_eval.csv").open("w", encoding="utf-8", newline="") as handle:
-        writer = csv.DictWriter(handle, fieldnames=HUMAN_FIELDS)
-        writer.writeheader()
-        for item in samples:
-            writer.writerow({name: item.get(name, "") for name in HUMAN_FIELDS})
-    # Publish success only after every sample and review artifact has been saved.
-    temporary = output / "metrics.json.tmp"
-    temporary.write_text(json.dumps(payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
-    temporary.replace(output / "metrics.json")
+    output = prepare_output_dir(output, payload.get("limit"))
+    _publish_results(output, payload, samples)
 
 
 def main(argv=None):
     args = parse_args(argv)
-    check_human_annotations(Path(args.output_dir))
+    output = prepare_output_dir(args.output_dir, args.limit)
     if args.backend == "local":
         local.resolve_device(args.device)
-    output = prepare_output_dir(args.output_dir, args.overwrite)
-    # An interrupted overwrite must not retain a previous success marker.
-    for name in ("metrics.json", "metrics.json.tmp", "samples.json", "human_eval.csv"):
-        (output / name).unlink(missing_ok=True)
-    with (output / "samples.jsonl").open("w", encoding="utf-8") as journal:
-        def save_record(record):
-            journal.write(json.dumps(record, ensure_ascii=False) + "\n")
-            journal.flush()
-        payload, samples = _evaluate(args, on_record=save_record)
-    write_greedy_results(output, payload, samples)
+    payload, samples = _evaluate(args)
+    _publish_results(output, payload, samples)
     print(json.dumps(payload, indent=2))
 
 

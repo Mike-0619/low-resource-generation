@@ -13,6 +13,7 @@ class DatasetSpec:
 
 
 DATASET_SPLIT = "test"
+LANGUAGES = ("en", "de", "tr")
 DATASET_SPECS = {
     "en": DatasetSpec(name="EleutherAI/lambada_openai", config="default",
                       revision="900124bf3b8235c6daf21033af9948b3f07346c4", expected_examples=5153),
@@ -21,6 +22,14 @@ DATASET_SPECS = {
 }
 BOLDT_ELIGIBLE_EXAMPLES = 5147
 BOLDT_PREPARATION_VERSION = "boldt_minimal_cleanup_v1"
+
+
+def get_dataset_spec(language: str) -> DatasetSpec:
+    if language in DATASET_SPECS:
+        return DATASET_SPECS[language]
+    if language == "tr":
+        raise ValueError("Turkish LAMBADA data is pending. Configure the dataset before evaluating with --language tr.")
+    raise ValueError(f"Unsupported language: {language}")
 
 
 def _load_lambada_dataset(language: str):
@@ -84,7 +93,7 @@ def prepare_boldt_examples(rows, english_examples):
 
 
 def load_lambada_examples(language: str):
-    spec = DATASET_SPECS[language]
+    spec = get_dataset_spec(language)
     rows = _load_lambada_dataset(language)
     dataset_examples = len(rows)
     description = f"{spec.name} ({DATASET_SPLIT})"

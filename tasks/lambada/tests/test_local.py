@@ -9,7 +9,6 @@ import torch
 from tokenizers import decoders
 
 from tasks.lambada.src import greedy as word, data as dataset, local, api as backend_api, scoring
-MODELS = ("openai/gpt-5.6-luna", "openai/gpt-5.6-sol")
 from tasks.lambada.src.local import BYTE_DECODER
 from tasks.lambada.src.local import FirstWord
 

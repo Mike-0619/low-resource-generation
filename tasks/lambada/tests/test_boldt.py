@@ -7,7 +7,6 @@ from pathlib import Path
 from unittest.mock import call, patch
 
 from tasks.lambada.src import greedy as word, data as dataset, local, api as backend_api, scoring
-MODELS = ("openai/gpt-5.6-luna", "openai/gpt-5.6-sol")
 from test_local import ByteTokenizer, FakeModel, local_runtime
 
 
@@ -80,7 +79,7 @@ class BoldtTests(unittest.TestCase):
                     'preparation_version': 'boldt_minimal_cleanup_v1'}
         with (patch.object(local.LocalModel, 'load', return_value=local_runtime(tok, model)),
               patch.object(dataset, 'load_lambada_examples', return_value=(examples, metadata)) as load):
-            metrics, rows = word.evaluate('/model', 'de', device='cpu')
+            metrics, rows = word.evaluate('/model', 'de', device='cpu', limit=20)
         load.assert_called_once_with('de')
         self.assertEqual([r['sample_id'] for r in rows], ['de:boldt:2', 'de:boldt:4'])
         self.assertEqual([r['english_dataset_index'] for r in rows], [9, 3])

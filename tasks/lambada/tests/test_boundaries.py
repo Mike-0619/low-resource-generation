@@ -4,7 +4,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from tasks.lambada.src import greedy as word, data as dataset, local, api as backend_api, scoring
-MODELS = ("openai/gpt-5.6-luna", "openai/gpt-5.6-sol")
+MODELS = ("openai/gpt-5.6-luna",)
 from test_api import api, event, ResponseStream
 from test_local import ByteTokenizer, FakeModel, generate_word, local_runtime
 
@@ -127,7 +127,7 @@ class BoundaryTests(unittest.TestCase):
                 if backend == 'local':
                     with patch.object(local.LocalModel, 'load',
                                       return_value=local_runtime(tok, FakeModel([tok.encode('Wolf!')]))):
-                        metrics, rows = word.evaluate('/model', 'en', device='cpu')
+                        metrics, rows = word.evaluate('/model', 'en', device='cpu', limit=20)
                 else:
                     with api([ResponseStream([event('response.output_text.delta', delta='Wolf!')])]):
                         metrics, rows = word.evaluate('fixture/model', 'en', backend='api')

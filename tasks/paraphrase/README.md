@@ -107,6 +107,9 @@ Set `CUDA_ROOT` to your CUDA 13.2 toolkit directory, with `bin/nvcc`, CUDA
 headers, and cuBLAS available. Build the optional judge dependency from the
 repository root with the project environment active.
 
+On LRZ, set `CUDA_ROOT` to the existing toolkit at
+`/dss/dssfs05/lwp-dss-0003/pn39je/pn39je-dss-0004/go46wuw2_2/.cache/runtime/cuda/toolkit-13.2.1`.
+
 ```bash
 export PATH="$CUDA_ROOT/bin:$PATH"
 export CUDACXX="$CUDA_ROOT/bin/nvcc"

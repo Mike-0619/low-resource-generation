@@ -96,7 +96,7 @@ class DataUtilsTest(unittest.TestCase):
 
     def test_workspace_cache_rejects_override_and_symlink_escape(self):
         workspace = self.root / "workspace"
-        helper = workspace / "config/cache/env.sh"
+        helper = workspace / ".agents/config/cache/env.sh"
         helper.parent.mkdir(parents=True)
         helper.touch()
         root = workspace / "Projects/low-resource-generation/models/gpt2/baseline"

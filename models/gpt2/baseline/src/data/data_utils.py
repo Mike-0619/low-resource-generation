@@ -30,7 +30,7 @@ def token_cache_directory(root, language, size):
     project = root.resolve().parents[2]
     workspace = project.parent.parent
     workspace_cache = workspace / ".cache"
-    on_lrz = (workspace / "config/cache/env.sh").is_file()
+    on_lrz = (workspace / ".agents/config/cache/env.sh").is_file()
     default = workspace_cache if on_lrz else Path.home() / ".cache"
     base = Path(os.environ.get("XDG_CACHE_HOME") or default).expanduser()
     directory = (base / "projects/low-resource-generation/gpt2-baseline/tokens" / language / size).resolve()

@@ -34,7 +34,13 @@ class ScriptTests(unittest.TestCase):
         self.temporary = tempfile.TemporaryDirectory(prefix='independent scripts ', dir=os.environ.get('XDG_CACHE_HOME'))
         self.addCleanup(self.temporary.cleanup)
         self.temp = Path(self.temporary.name)
-        self.root = self.temp / 'project with spaces'
+        self.workspace = self.temp / 'workspace with spaces'
+        self.root = self.workspace / 'Projects/project with spaces'
+        self.cache = self.workspace / '.cache'
+        self.default_datasets = self.cache / 'projects/low-resource-generation/datasets'
+        cache_helper = self.workspace / '.agents/config/cache/env.sh'
+        cache_helper.parent.mkdir(parents=True)
+        shutil.copyfile(ROOT.parents[1] / '.agents/config/cache/env.sh', cache_helper)
         for directory in ['.venv/bin', 'fixture-bin', 'models/gpt2/baseline']:
             (self.root / directory).mkdir(parents=True, exist_ok=True)
         for relative in EXPECTED:
@@ -43,6 +49,7 @@ class ScriptTests(unittest.TestCase):
             shutil.copyfile(ROOT / relative, target)
         self.dotenv = self.root / '.env'
         self.dotenv.write_text((ROOT / '.env.example').read_text().replace(
+            str(ROOT.parents[1]), str(self.workspace)).replace(
             '${OPENAI_API_KEY:-}', '${OPENAI_API_KEY:-DOTENV_FIXTURE_MARKER}'))
         self.activate = self.root / '.venv/bin/activate'
         self.activate.write_text('export VIRTUAL_ENV="$PWD/.venv"\n')
@@ -51,6 +58,8 @@ class ScriptTests(unittest.TestCase):
 print(json.dumps({'args':sys.argv[1:], 'cwd':os.getcwd(),
  'venv':os.environ.get('VIRTUAL_ENV'), 'corpus':os.environ.get('CORPUS_ROOT'),
  'cache':os.environ.get('HF_HOME'), 'datasets':os.environ.get('HF_DATASETS_CACHE'),
+ 'workspace':os.environ.get('WORKSPACE_ROOT'), 'project_cache':os.environ.get('MPLCONFIGDIR'),
+ 'api_url':os.environ.get('OPENAI_BASE_URL'),
  'xdg_cache':os.environ.get('XDG_CACHE_HOME'), 'uv_cache':os.environ.get('UV_CACHE_DIR'),
  'bytecode':os.environ.get('PYTHONDONTWRITEBYTECODE'),
  'api':os.environ.get('OPENAI_API_KEY') in ['DOTENV_FIXTURE_MARKER','EXPORTED_FIXTURE_MARKER'],
@@ -126,22 +135,27 @@ sys.exit(int(os.environ.get('FIXTURE_EXIT','0')))
     def test_environment_defaults_and_exported_overrides(self):
         job = next(iter(EXPECTED))
         record = self.execute(job)[0]
-        self.assertEqual(record['corpus'], str(self.root / 'corpora'))
-        self.assertEqual(record['xdg_cache'], str(self.root / '.cache'))
-        self.assertEqual(record['uv_cache'], str(self.root / '.cache/uv'))
-        for key in ('cache', 'datasets', 'bytecode'):
-            self.assertIsNone(record[key])
-        shared_cache = str(self.temp / 'shared cache')
+        self.assertEqual(record['workspace'], str(self.workspace))
+        self.assertEqual(record['corpus'], str(self.workspace / 'Corpora'))
+        self.assertEqual(record['xdg_cache'], str(self.cache))
+        self.assertEqual(record['uv_cache'], str(self.cache / 'uv'))
+        self.assertEqual(record['cache'], str(self.cache / 'huggingface'))
+        self.assertEqual(record['datasets'], str(self.default_datasets))
+        self.assertEqual(record['project_cache'], str(self.cache / 'projects/low-resource-generation/matplotlib'))
+        self.assertEqual(record['bytecode'], '1')
+        self.assertEqual(record['api_url'], 'https://openrouter.ai/api/v1')
+        shared_cache = str(self.cache / 'alternate cache')
         record = self.execute(job, extra={'XDG_CACHE_HOME': shared_cache})[0]
         self.assertEqual(record['xdg_cache'], shared_cache)
-        self.assertEqual(record['uv_cache'], str(Path(shared_cache) / 'uv'))
+        self.assertEqual(record['uv_cache'], str(self.cache / 'uv'))
         overrides = {
             'XDG_CACHE_HOME': shared_cache,
-            'HF_HOME': str(self.temp / 'custom/hf'),
-            'HF_DATASETS_CACHE': str(self.temp / 'custom/datasets'),
-            'UV_CACHE_DIR': str(self.temp / 'custom/uv'),
+            'HF_HOME': str(self.cache / 'custom/hf'),
+            'HF_DATASETS_CACHE': str(self.cache / 'custom/datasets'),
+            'UV_CACHE_DIR': str(self.cache / 'custom/uv'),
             'CORPUS_ROOT': str(self.temp / 'custom/corpora'),
             'OPENAI_API_KEY': 'EXPORTED_FIXTURE_MARKER',
+            'OPENAI_BASE_URL': 'https://provider.example/v1',
             'PYTHONDONTWRITEBYTECODE': '1',
         }
         record = self.execute(job, extra=overrides)[0]
@@ -152,13 +166,22 @@ sys.exit(int(os.environ.get('FIXTURE_EXIT','0')))
         self.assertEqual(record['corpus'], overrides['CORPUS_ROOT'])
         self.assertEqual(record['bytecode'], '1')
         self.assertTrue(record['api_override'])
-        record = self.execute(job, extra={
-            'CORPUS_ROOT': '', 'OPENAI_API_KEY': '', 'XDG_CACHE_HOME': '', 'UV_CACHE_DIR': '',
-        })[0]
-        self.assertEqual(record['corpus'], str(self.root / 'corpora'))
-        self.assertEqual(record['xdg_cache'], str(self.root / '.cache'))
-        self.assertEqual(record['uv_cache'], str(self.root / '.cache/uv'))
+        self.assertEqual(record['api_url'], overrides['OPENAI_BASE_URL'])
+        record = self.execute(job, extra={key: '' for key in overrides})[0]
+        self.assertEqual(record['corpus'], str(self.workspace / 'Corpora'))
+        self.assertEqual(record['xdg_cache'], str(self.cache))
+        self.assertEqual(record['uv_cache'], str(self.cache / 'uv'))
+        self.assertEqual(record['cache'], str(self.cache / 'huggingface'))
+        self.assertEqual(record['datasets'], str(self.default_datasets))
+        self.assertEqual(record['bytecode'], '1')
+        self.assertEqual(record['api_url'], 'https://openrouter.ai/api/v1')
         self.assertTrue(record['api'])
+
+    def test_outside_cache_overrides_stop_before_launch(self):
+        for variable in ('XDG_CACHE_HOME', 'UV_CACHE_DIR', 'HF_HOME', 'HF_DATASETS_CACHE'):
+            with self.subTest(variable=variable):
+                self.assertEqual(self.execute(next(iter(EXPECTED)),
+                    extra={variable: str(self.temp / 'outside-cache')}, code=1), [])
 
     def test_missing_setup_stops_before_execution(self):
         job = next(iter(EXPECTED))

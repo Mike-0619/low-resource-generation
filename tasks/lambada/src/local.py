@@ -33,11 +33,14 @@ class TokenBytes:
             kind = step["type"]
             if kind == "ByteLevel" and index == 0:
                 continue
-            if kind == "Replace" and (step.get("pattern"), step.get("content")) in [({"String": "▁"}, " "), ({"String": "\n "}, "\n")]:
+            if kind == "Replace" and (step.get("pattern"), step.get("content")) in [
+                ({"String": "▁"}, " "), ({"String": "\n "}, "\n"),
+            ]:
                 continue
             if kind == "Metaspace" and step.get("prepend_scheme", "always") in {"always", "first", "never"}:
                 continue
-            if kind == "Strip" and step.get("content") == " " and step.get("start", 0) >= 0 and step.get("stop", 0) >= 0:
+            if (kind == "Strip" and step.get("content") == " "
+                    and step.get("start", 0) >= 0 and step.get("stop", 0) >= 0):
                 continue
             if kind not in {"ByteFallback", "Fuse"}:
                 raise ValueError(f"Unsupported tokenizer decoder: {state}")
@@ -51,7 +54,7 @@ class TokenBytes:
                   if self.byte_level else [piece.encode("utf-8") for piece in pieces])
         for step in self.steps:
             kind = step["type"]
-            if kind == "ByteLevel":
+            if kind in {"ByteLevel", "Fuse"}:
                 chunks = [b"".join(chunks)]
             elif kind == "Replace":
                 pattern, replacement = step["pattern"]["String"].encode(), step["content"].encode()
@@ -74,17 +77,13 @@ class TokenBytes:
                 if pending:
                     decoded.append(bytes(pending))
                 chunks = decoded
-            elif kind == "Fuse":
-                chunks = [b"".join(chunks)]
             elif kind == "Strip":
                 stripped = []
                 for chunk in chunks:
                     for _ in range(step.get("start", 0)):
-                        if chunk.startswith(b" "):
-                            chunk = chunk[1:]
+                        chunk = chunk.removeprefix(b" ")
                     for _ in range(step.get("stop", 0)):
-                        if chunk.endswith(b" "):
-                            chunk = chunk[:-1]
+                        chunk = chunk.removesuffix(b" ")
                     stripped.append(chunk)
                 chunks = stripped
         return b"".join(chunks)
@@ -204,7 +203,10 @@ class LocalModel:
             raise ValueError("Only decoder-only causal language models are supported")
         tokenizer = AutoTokenizer.from_pretrained(path, use_fast=True, **offline)
         decoder = TokenBytes(tokenizer)
-        dtype = torch.float32 if dtype == "auto" and device.type == "cpu" else ("auto" if dtype == "auto" else getattr(torch, dtype))
+        if dtype == "auto" and device.type == "cpu":
+            dtype = torch.float32
+        elif dtype != "auto":
+            dtype = getattr(torch, dtype)
         model = AutoModelForCausalLM.from_pretrained(path, config=config, dtype=dtype, **offline).to(device)
         model.eval()
         return cls(path, tokenizer, model, device, context_limit=context_limit, bos=bos, decoder=decoder)

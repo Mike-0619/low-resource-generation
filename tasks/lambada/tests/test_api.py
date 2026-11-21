@@ -10,7 +10,7 @@ from unittest.mock import MagicMock, patch
 
 from tasks.lambada import src as lambada
 from tasks.lambada.src import greedy as word, data as dataset, local, api as backend_api, scoring
-MODELS = ("openai/gpt-5.6-luna", "openai/gpt-5.6-sol")
+MODELS = ("openai/gpt-5.6-luna",)
 
 
 def event(kind, **fields):
@@ -93,13 +93,13 @@ assert metrics['total'] == 0 and metrics['accuracy'] is None and rows == []
                 stream = ResponseStream([*[event('response.output_text.delta', delta=text[i:i+width])
                                            for i in range(0, len(text), width)], event('response.completed')])
                 with self.subTest(text=text, width=width), api([stream]) as client:
-                    result = backend_api.request(client, {'context':'context'}, MODELS[1], reasoning_effort='none')
+                    result = backend_api.request(client, {'context':'context'}, MODELS[0], reasoning_effort='none')
                     self.assertEqual(scoring.score_word(result['prediction'], target, result['completed'])['exact_match'], expected)
                     self.assertTrue(stream.closed)
                     args = client.responses.create.call_args.kwargs
                     self.assertEqual(args['max_output_tokens'], 128)
                     self.assertEqual(args['instructions'], backend_api.API_INSTRUCTIONS)
-                    self.assertEqual(args['model'], MODELS[1])
+                    self.assertEqual(args['model'], MODELS[0])
                     self.assertEqual(args['temperature'], 0)
                     self.assertEqual(args['reasoning'], {'effort':'none'})
 
