@@ -81,7 +81,8 @@ evaluation results.
 
 Once the dataset is configured in [data.py](src/data.py), create the matching
 directories under `tasks/lambada/logs/` before submission. Each script evaluates
-the full dataset and takes no positional arguments.
+the full dataset using its fixed settings. Extra script arguments are ignored;
+use the Python entry point above to change evaluation options.
 
 ## Directory layout
 

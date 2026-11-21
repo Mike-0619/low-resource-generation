@@ -1,9 +1,3 @@
 # Local environment
 .venv/
 .env
-
-# Python bytecode
-__pycache__/
-
-# Private machine notes
-/README.local.md

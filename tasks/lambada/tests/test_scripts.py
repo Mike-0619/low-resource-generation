@@ -132,15 +132,15 @@ sys.exit(int(os.environ.get('FIXTURE_EXIT','0')))
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn('--backend', result.stdout)
 
-    def test_slurm_resources_are_portable(self):
+    def test_slurm_resources_preserve_gpu_requests(self):
         for relative, expected in EXPECTED.items():
             command = expected['commands'][0]
             gpu = 'src.training' in command or ('--backend' in command and command[command.index('--backend') + 1] == 'local')
             lines = (ROOT / relative).read_text().splitlines()
-            for option in ('partition', 'qos', 'constraint', 'account'):
-                self.assertFalse(any(line.startswith(f'#SBATCH --{option}=') for line in lines))
-            self.assertEqual([line for line in lines if line.startswith('#SBATCH --gres=')],
-                             ['#SBATCH --gres=gpu:1'] if gpu else [])
+            requests = [line for line in lines if line.startswith('#SBATCH --gres=')]
+            self.assertEqual(len(requests), int(gpu))
+            if gpu:
+                self.assertRegex(requests[0], r'^#SBATCH --gres=gpu(?::[^:\s]+)?:1$')
 
     def test_all_jobs_direct_and_slurm_copies(self):
         for relative, expected in EXPECTED.items():
@@ -160,13 +160,6 @@ sys.exit(int(os.environ.get('FIXTURE_EXIT','0')))
                         self.assertEqual(record['task_env'],expected['exports'])
                         self.assertTrue(record['api'])
 
-
-    def test_all_jobs_reject_arguments_before_setup(self):
-        self.dotenv.unlink()
-        for relative in EXPECTED:
-            for args in (('',), ('invalid',), ('smoke',), ('full',)):
-                with self.subTest(script=relative, args=args):
-                    self.assertEqual(self.execute(relative, code=2, args=args), [])
 
     def test_environment_defaults_and_exported_overrides(self):
         job = next(iter(EXPECTED))

@@ -37,8 +37,7 @@ The example is a standalone Bash configuration. `XDG_CACHE_HOME` defaults to
 `uv/`. Set `HF_HOME`, `HF_DATASETS_CACHE` or `UV_CACHE_DIR` to override them.
 Nonempty exported values take precedence; empty values use defaults.
 Existing local `.env` settings are preserved, including any shared cache setup.
-Python bytecode is disabled by default. Git ignores `.env` and optional machine
-notes in `README.local.md`.
+Python bytecode is disabled by default. Git ignores local `.env` files.
 
 ## GPT-2 data
 
@@ -73,7 +72,6 @@ Add `--qos=YOUR_QOS` when required. If the site requires a GPU type, override
 `--gres`, for example `--gres=gpu:TYPE:1`. Command-line options override the
 script's defaults; shell variables are not expanded inside `#SBATCH` directives.
 See the [Slurm documentation](https://slurm.schedmd.com/sbatch.html).
-Keep machine-specific commands in the ignored `README.local.md`.
 [Baseline Slurm guide](models/gpt2/baseline/README.md#run-with-slurm) ·
 [Ablation Slurm guide](models/gpt2/ablation/README.md#run-with-slurm)
 

@@ -11,11 +11,6 @@
 
 set -e
 
-if (( $# )); then
-  printf 'Usage: %s\n' "$0" >&2
-  exit 2
-fi
-
 source .env
 source .venv/bin/activate
 

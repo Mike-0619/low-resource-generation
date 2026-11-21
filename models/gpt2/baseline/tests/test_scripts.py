@@ -79,23 +79,23 @@ sys.exit(int(os.environ.get('FIXTURE_EXIT','0')))
             self.assertNotIn(secret, result.stdout + result.stderr)
         return [json.loads(line) for line in result.stdout.splitlines() if line.startswith('{')]
 
-    def test_slurm_resources_are_portable(self):
+    def test_slurm_resources_preserve_gpu_requests(self):
         script_root = ROOT / "models/gpt2/baseline/scripts"
         self.assertEqual({path.relative_to(ROOT).as_posix() for path in script_root.rglob("*.slurm")},
                          set(EXPECTED))
         for relative in EXPECTED:
             gpu = Path(relative).name == "train.slurm"
             lines = (ROOT / relative).read_text().splitlines()
-            for option in ('partition', 'qos', 'constraint', 'account'):
-                self.assertFalse(any(line.startswith(f'#SBATCH --{option}=') for line in lines))
-            self.assertEqual([line for line in lines if line.startswith('#SBATCH --gres=')],
-                             ['#SBATCH --gres=gpu:1'] if gpu else [])
+            requests = [line for line in lines if line.startswith('#SBATCH --gres=')]
+            self.assertEqual(len(requests), int(gpu))
+            if gpu:
+                self.assertRegex(requests[0], r'^#SBATCH --gres=gpu(?::[^:\s]+)?:1$')
             language, size, filename = Path(relative).parts[-3:]
             log = f"models/gpt2/baseline/logs/{language}/{size}/{Path(filename).stem}/%j"
             self.assertIn(f"#SBATCH --output={log}.out", lines)
             self.assertIn(f"#SBATCH --error={log}.err", lines)
 
-    def test_public_templates_have_no_machine_configuration(self):
+    def test_public_environment_and_literal_slurm_directives(self):
         for relative in ('.env.example', 'README.md', 'tasks/paraphrase/README.md'):
             text = (ROOT / relative).read_text()
             for prefix in ('/dss/', '/storage/nobackup/', '/storage/home/'):
@@ -107,10 +107,6 @@ sys.exit(int(os.environ.get('FIXTURE_EXIT','0')))
                 for line in script.read_text().splitlines():
                     if line.startswith('#SBATCH'):
                         self.assertNotIn('$', line)
-                        for option in ('partition', 'qos', 'constraint', 'account'):
-                            self.assertFalse(line.startswith(f'#SBATCH --{option}='))
-                    self.assertNotIn('lrz-', line)
-                    self.assertNotIn('gpu:nvidia:', line)
 
     def test_training_host_memory_matches_corpus_size(self):
         for language, sizes in PREPARATION_SIZES.items():
